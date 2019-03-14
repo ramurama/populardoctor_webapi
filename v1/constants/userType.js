@@ -1,0 +1,6 @@
+module.exports = {
+  ADMIN: "ADMIN",
+  DOCTOR: "DOCTOR",
+  CUSTOMER: "CUSTOMER",
+  FRONTDESK: "FRONTDESK"
+};

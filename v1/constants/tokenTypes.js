@@ -1,0 +1,5 @@
+module.exports = {
+  REGULAR: "REGULAR",
+  PREMIUM: "PREMIUM",
+  FASTTRACT: "FASTTRACT"
+};

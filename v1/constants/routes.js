@@ -35,6 +35,7 @@ module.exports = {
   ADD_FAVORITE: "/api/v1/customer/addFavorite",
   REMOVE_FAVORITE: "/api/v1/customer/removeFavorite",
   GET_FAVORITES: "/api/v1/customer/getFavorites",
+  BOOK_TOKEN: "/api/v1/customer/bookToken",
 
   //doctor
   CONFIRM_SCHEDULE: "/api/v1/doctor/confirmSchedule"

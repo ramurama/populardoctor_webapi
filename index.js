@@ -14,6 +14,8 @@ require("./v1/models/Hospital");
 require("./v1/models/Doctor");
 require("./v1/models/Schedule");
 require("./v1/models/TokenTable");
+require("./v1/models/Booking");
+require("./v1/models/AutoNumber");
 
 //v1 services
 require("./v1/services/passport");

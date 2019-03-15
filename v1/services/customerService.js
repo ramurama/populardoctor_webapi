@@ -7,12 +7,16 @@ const Hospital = mongoose.model(modelNames.HOSPITAL);
 const Location = mongoose.model(modelNames.LOCATION);
 const Schedule = mongoose.model(modelNames.SCHEDULE);
 const TokenTable = mongoose.model(modelNames.TOKEN_TABLE);
+const AutoNumber = mongoose.model(modelNames.AUTO_NUMBER);
+const Booking = mongoose.model(modelNames.BOOKING);
 const utils = require("../utils");
 const tokenBookingStatus = require("../constants/tokenBookingStatus");
 const moment = require("moment");
 const momentTz = require("moment-timezone");
 const CronJob = require("cron").CronJob;
 const operations = require("../constants/operation");
+
+const BOOKING_TIME_LIMIT = 4; //4 hours
 
 module.exports = {
   /**
@@ -266,11 +270,7 @@ module.exports = {
           } else {
             const { tokens } = tokenTableDoc;
             //iterate and find the user selected token
-            const selectedToken = tokens.find(token => {
-              if (utils.isEqual(token.number, tokenNumber)) {
-                return token;
-              }
-            });
+            const selectedToken = _findToken(tokens, tokenNumber);
             //check if the status of the selected token is already BLOCKED.
             //if so, return status as false with a message.
             if (
@@ -403,6 +403,63 @@ module.exports = {
         }
       }
     );
+  },
+
+  async bookToken(bookingData, callback) {
+    const {
+      userId,
+      doctorId,
+      scheduleId,
+      tokenDate,
+      tokenNumber,
+      latLng
+    } = bookingData;
+    const status = tokenBookingStatus.BOOKED;
+    const isTokenTableDocUpdated = await _updateTokenTableDocStatus(
+      doctorId,
+      scheduleId,
+      tokenDate,
+      tokenNumber,
+      status
+    );
+    if (isTokenTableDocUpdated) {
+      const tokenTableDoc = await _getTokenTableData(
+        doctorId,
+        scheduleId,
+        tokenDate
+      );
+      const { startTime, endTime } = tokenTableDoc;
+      const startTimeStamp = _getDateTime(tokenDate, startTime)
+        .subtract(BOOKING_TIME_LIMIT, "hours")
+        .toDate();
+      const endTimeStamp = _getDateTime(tokenDate, endTime).toDate();
+      const selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
+      delete selectedToken.status;
+      const bookingId = await _getAutoNumber();
+      const bookedTimeStamp = new Date();
+      Booking.collection
+        .insertOne({
+          bookingId,
+          userId,
+          doctorId,
+          scheduleId,
+          tokenDate: new Date(tokenDate),
+          token: selectedToken,
+          startTime,
+          endTime,
+          latLng,
+          startTimeStamp,
+          endTimeStamp,
+          bookedTimeStamp,
+          status
+        })
+        .then(res => {
+          callback(true, bookingId);
+        })
+        .catch(err => console.log(err));
+    } else {
+      callback(false, null);
+    }
   }
 };
 
@@ -475,8 +532,6 @@ function _getAvailabilityStatus(doctorId) {
  * @param {Object} tokenTableDoc
  */
 function _computeAvailabilityStatus(tokenTableDoc) {
-  const BOOKING_TIME_LIMIT = 4; //4 hours
-
   // process.env.TZ = "Asia/Calcutta|Asia/Kolkata";
 
   const now = new Date();
@@ -516,6 +571,7 @@ function _computeAvailabilityStatus(tokenTableDoc) {
 function _getMoment(time) {
   return momentTz.tz(time, "Asia/Calcutta");
 }
+
 function _get24HrFormatTime(time) {
   return moment(time, ["h:mm A"]).format("HH:mm");
 }
@@ -593,6 +649,14 @@ function _updateTokenStatus(doctorId, scheduleId, tokenDate, tokenNumber) {
   );
 }
 
+/**
+ * _updateFavorites method adds/removes a userId of the  doctor
+ * to the favorites array of the passed mobile(username).
+ *
+ * @param {String} mobile
+ * @param {String} userId
+ * @param {String} operation
+ */
 function _updateFavorites(mobile, userId, operation) {
   return new Promise((resolve, reject) => {
     User.findOne({ username: mobile }, (err, user) => {
@@ -630,5 +694,121 @@ function _updateFavorites(mobile, userId, operation) {
         }
       }
     });
+  });
+}
+
+/**
+ * _getAutoNumber method fetches the number from collection.
+ * It then increments the number by one and is saved to the same document in the collection.
+ */
+function _getAutoNumber() {
+  return new Promise((resolve, reject) => {
+    AutoNumber.find({}, (err, numbers) => {
+      if (err) {
+        reject(err);
+      } else {
+        const { number } = numbers[0];
+        const nextNumber = number + 1;
+        AutoNumber.updateOne(
+          { number },
+          {
+            $set: {
+              number: nextNumber
+            }
+          },
+          (err, raw) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(number);
+            }
+          }
+        );
+      }
+    });
+  });
+}
+
+/**
+ * _findToken method finds and returns the token from the given array of tokens.
+ *
+ * @param {Array} tokens
+ * @param {Number} tokenNumber
+ */
+function _findToken(tokens, tokenNumber) {
+  return tokens.find(token => {
+    if (utils.isEqual(token.number, tokenNumber)) {
+      return token;
+    }
+  });
+}
+
+/**
+ * _getTokenTableData method returns a tokenTable document for the given params
+ *
+ * @param {String} doctorId
+ * @param {String} scheduleId
+ * @param {String} tokenDate
+ */
+function _getTokenTableData(doctorId, scheduleId, tokenDate) {
+  return new Promise((resolve, reject) => {
+    TokenTable.findOne(
+      { doctorId, scheduleId, tokenDate },
+      (err, tokenTableDoc) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(tokenTableDoc);
+        }
+      }
+    );
+  });
+}
+
+/**
+ * __updateTokenTableDocStatus method updates the status of the token to the passed status
+ *
+ * @param {String} doctorId
+ * @param {String} scheduleId
+ * @param {String} tokenDate
+ * @param {Number} tokenNumber
+ * @param {String} status
+ */
+function _updateTokenTableDocStatus(
+  doctorId,
+  scheduleId,
+  tokenDate,
+  tokenNumber,
+  status
+) {
+  return new Promise((resolve, reject) => {
+    TokenTable.findOne(
+      { doctorId, scheduleId, tokenDate },
+      (err, tokenTableDoc) => {
+        let selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
+        if (
+          utils.isStringsEqual(selectedToken.status, tokenBookingStatus.BOOKED)
+        ) {
+          resolve(false);
+        } else {
+          selectedToken.status = status;
+          TokenTable.updateOne(
+            { doctorId, scheduleId, tokenDate },
+            {
+              $set: {
+                tokens: tokenTableDoc.tokens
+              }
+            },
+            (err, raw) => {
+              if (err) {
+                reject(false);
+              } else {
+                resolve(true);
+              }
+            }
+          );
+        }
+      }
+    );
   });
 }

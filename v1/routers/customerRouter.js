@@ -107,4 +107,14 @@ module.exports = app => {
       });
     }
   );
+
+  app.post(
+    routes.BOOK_TOKEN,
+    passport.authenticate("jwt", { session: false }),
+    (req, res) => {
+      customerService.bookToken(req.body, (status, bookingId) => {
+        res.send({ status, bookingId });
+      });
+    }
+  );
 };

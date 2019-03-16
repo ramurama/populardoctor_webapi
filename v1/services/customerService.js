@@ -72,6 +72,92 @@ module.exports = {
   },
 
   /**
+   * addFavorite method adds the new userId of a doctor to the favorites list of the given user.
+   *
+   * @param {String} mobile
+   * @param {String} userId
+   * @param {Function} callback
+   */
+  async addFavorite(mobile, userId, callback) {
+    try {
+      const favorites = await _updateFavorites(mobile, userId, operations.ADD);
+      callback(true, favorites);
+    } catch (err) {
+      callback(false, null);
+    }
+  },
+
+  /**
+   * removeFavorite method removes the userId of the doctor from the favorites list of the given user.
+   *
+   * @param {String} mobile
+   * @param {String} userId
+   * @param {Function} callback
+   */
+  async removeFavorite(mobile, userId, callback) {
+    try {
+      const favorites = await _updateFavorites(
+        mobile,
+        userId,
+        operations.REMOVE
+      );
+      callback(true, favorites);
+    } catch (err) {
+      callback(false, null);
+    }
+  },
+
+  /**
+   * getFavorites method fetches a list of doctors matching the favoritesArray.
+   *
+   * @param {Array} favoritesArray
+   * @param {Function} callback
+   */
+  getFavoriteDoctors(favoritesArray, callback) {
+    Doctor.aggregate(
+      [
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "doctorDetails"
+          }
+        },
+        {
+          $unwind: "$doctorDetails"
+        },
+        {
+          $project: {
+            "doctorDetails._id": 0,
+            "doctorDetails.password": 0,
+            "doctorDetails.username": 0,
+            "doctorDetails.userType": 0,
+            "doctorDetails.status": 0,
+            "doctorDetails.favorites": 0,
+            "doctorDetails.dateOfBirth": 0,
+            yearsOfExperience: 0
+          }
+        }
+      ],
+      (err, favoriteDoctors) => {
+        if (err) {
+          callback([]);
+        } else {
+          const favorites = favoriteDoctors
+            .map(doctor => {
+              if (favoritesArray.includes(doctor.userId.toString())) {
+                return doctor;
+              }
+            })
+            .filter(element => !utils.isUndefined(element));
+          callback(favorites);
+        }
+      }
+    );
+  },
+
+  /**
    * getDoctorsList method fetches a list of doctors based on the given location and specialization.
    *
    * lookup order:
@@ -320,91 +406,12 @@ module.exports = {
   },
 
   /**
-   * addFavorite method adds the new userId of a doctor to the favorites list of the given user.
-   *
-   * @param {String} mobile
-   * @param {String} userId
-   * @param {Function} callback
+   * bookToken updates the status of the token in tokenTableDoc.
+   * It then adds a new document to the BOOKINGS collection.
+   * 
+   * @param {Object} bookingData 
+   * @param {Function} callback 
    */
-  async addFavorite(mobile, userId, callback) {
-    try {
-      const favorites = await _updateFavorites(mobile, userId, operations.ADD);
-      callback(true, favorites);
-    } catch (err) {
-      callback(false, null);
-    }
-  },
-
-  /**
-   * removeFavorite method removes the userId of the doctor from the favorites list of the given user.
-   *
-   * @param {String} mobile
-   * @param {String} userId
-   * @param {Function} callback
-   */
-  async removeFavorite(mobile, userId, callback) {
-    try {
-      const favorites = await _updateFavorites(
-        mobile,
-        userId,
-        operations.REMOVE
-      );
-      callback(true, favorites);
-    } catch (err) {
-      callback(false, null);
-    }
-  },
-
-  /**
-   * getFavorites method fetches a list of doctors matching the favoritesArray.
-   *
-   * @param {Array} favoritesArray
-   * @param {Function} callback
-   */
-  getFavoriteDoctors(favoritesArray, callback) {
-    Doctor.aggregate(
-      [
-        {
-          $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            as: "doctorDetails"
-          }
-        },
-        {
-          $unwind: "$doctorDetails"
-        },
-        {
-          $project: {
-            "doctorDetails._id": 0,
-            "doctorDetails.password": 0,
-            "doctorDetails.username": 0,
-            "doctorDetails.userType": 0,
-            "doctorDetails.status": 0,
-            "doctorDetails.favorites": 0,
-            "doctorDetails.dateOfBirth": 0,
-            yearsOfExperience: 0
-          }
-        }
-      ],
-      (err, favoriteDoctors) => {
-        if (err) {
-          callback([]);
-        } else {
-          const favorites = favoriteDoctors
-            .map(doctor => {
-              if (favoritesArray.includes(doctor.userId.toString())) {
-                return doctor;
-              }
-            })
-            .filter(element => !utils.isUndefined(element));
-          callback(favorites);
-        }
-      }
-    );
-  },
-
   async bookToken(bookingData, callback) {
     const {
       userId,

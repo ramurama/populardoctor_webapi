@@ -112,7 +112,11 @@ module.exports = app => {
     routes.BOOK_TOKEN,
     passport.authenticate("jwt", { session: false }),
     (req, res) => {
-      customerService.bookToken(req.body, (status, bookingId) => {
+      const bookingData = {
+        ...req.body,
+        userId: req.user._id
+      };
+      customerService.bookToken(bookingData, (status, bookingId) => {
         res.send({ status, bookingId });
       });
     }

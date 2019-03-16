@@ -28,13 +28,13 @@ module.exports = {
 
   //customer
   GET_SEARCH_CRITERIA: "/api/v1/customer/getSearchCriteria",
+  ADD_FAVORITE: "/api/v1/customer/addFavorite",
+  REMOVE_FAVORITE: "/api/v1/customer/removeFavorite",
+  GET_FAVORITES: "/api/v1/customer/getFavorites",
   GET_DOCTORS_LIST: "/api/v1/customer/getDoctorsList",
   GET_DOCTOR_SCHEDULES: "/api/v1/customer/getSchedules",
   GET_TOKENS: "/api/v1/customer/getTokens",
   BLOCK_TOKEN: "/api/v1/customer/blockToken",
-  ADD_FAVORITE: "/api/v1/customer/addFavorite",
-  REMOVE_FAVORITE: "/api/v1/customer/removeFavorite",
-  GET_FAVORITES: "/api/v1/customer/getFavorites",
   BOOK_TOKEN: "/api/v1/customer/bookToken",
 
   //doctor

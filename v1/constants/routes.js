@@ -36,6 +36,7 @@ module.exports = {
   GET_TOKENS: "/api/v1/customer/getTokens",
   BLOCK_TOKEN: "/api/v1/customer/blockToken",
   BOOK_TOKEN: "/api/v1/customer/bookToken",
+  GET_BOOKING_HISTORY: "/api/v1/customer/getBookingHistory",
 
   //doctor
   CONFIRM_SCHEDULE: "/api/v1/doctor/confirmSchedule"

@@ -359,45 +359,49 @@ module.exports = {
             const selectedToken = _findToken(tokens, tokenNumber);
             //check if the status of the selected token is already BLOCKED.
             //if so, return status as false with a message.
-            if (
-              utils.isStringsEqual(
-                selectedToken.status,
-                tokenBookingStatus.BLOCKED
-              )
-            ) {
-              callback(
-                false,
-                "Selected token has been blocked by someone. Please try again after sometime."
-              );
+            if (utils.isEqual(tokenNumber, 0)) {
+              callback(true, null);
             } else {
-              //if the satus of the token is OPEN, set the status to BLOCKED
-              selectedToken.status = tokenBookingStatus.BLOCKED;
-              //update the status in token table
-              TokenTable.updateOne(
-                { doctorId, scheduleId, tokenDate },
-                {
-                  $set: {
-                    tokens
+              if (
+                utils.isStringsEqual(
+                  selectedToken.status,
+                  tokenBookingStatus.BLOCKED
+                )
+              ) {
+                callback(
+                  false,
+                  "Selected token has been blocked by someone. Please try again after sometime."
+                );
+              } else {
+                //if the satus of the token is OPEN, set the status to BLOCKED
+                selectedToken.status = tokenBookingStatus.BLOCKED;
+                //update the status in token table
+                TokenTable.updateOne(
+                  { doctorId, scheduleId, tokenDate },
+                  {
+                    $set: {
+                      tokens
+                    }
+                  },
+                  (err, raw) => {
+                    if (err) {
+                      callback(false);
+                    } else {
+                      //create a cron job for checking after 3 minutes if the token is in blocked state
+                      _createCronJob(
+                        doctorId,
+                        scheduleId,
+                        tokenDate,
+                        tokenNumber
+                      );
+                      console.log(
+                        "Token number: " + tokenNumber + " has been blocked."
+                      );
+                      callback(true, null);
+                    }
                   }
-                },
-                (err, raw) => {
-                  if (err) {
-                    callback(false);
-                  } else {
-                    //create a cron job for checking after 3 minutes if the token is in blocked state
-                    _createCronJob(
-                      doctorId,
-                      scheduleId,
-                      tokenDate,
-                      tokenNumber
-                    );
-                    console.log(
-                      "Token number: " + tokenNumber + " has been blocked."
-                    );
-                    callback(true, null);
-                  }
-                }
-              );
+                );
+              }
             }
           }
         }
@@ -408,9 +412,9 @@ module.exports = {
   /**
    * bookToken updates the status of the token in tokenTableDoc.
    * It then adds a new document to the BOOKINGS collection.
-   * 
-   * @param {Object} bookingData 
-   * @param {Function} callback 
+   *
+   * @param {Object} bookingData
+   * @param {Function} callback
    */
   async bookToken(bookingData, callback) {
     const {
@@ -448,8 +452,8 @@ module.exports = {
         .insertOne({
           bookingId,
           userId,
-          doctorId,
-          scheduleId,
+          doctorId: mongoose.Types.ObjectId(doctorId),
+          scheduleId: mongoose.Types.ObjectId(scheduleId),
           tokenDate: new Date(tokenDate),
           token: selectedToken,
           startTime,
@@ -467,6 +471,126 @@ module.exports = {
     } else {
       callback(false, null);
     }
+  },
+
+  /**
+   * getBookingHistory method fetches all the booking data given a userId.
+   *
+   * @param {String} userId
+   * @param {Function} callback
+   */
+  getBookingHistory(userId, callback) {
+    Booking.aggregate(
+      [
+        {
+          $lookup: {
+            from: "doctors",
+            localField: "doctorId",
+            foreignField: "_id",
+            as: "doctorDetailsTemp"
+          }
+        },
+        {
+          $match: {
+            userId
+          }
+        },
+        {
+          $unwind: "$doctorDetailsTemp"
+        },
+        {
+          $lookup: {
+            from: "schedules",
+            localField: "scheduleId",
+            foreignField: "_id",
+            as: "scheduleDetails"
+          }
+        },
+        {
+          $unwind: "$scheduleDetails"
+        },
+        {
+          $lookup: {
+            from: "hospitals",
+            localField: "scheduleDetails.hospitalId",
+            foreignField: "_id",
+            as: "hospitalDetails"
+          }
+        },
+        {
+          $unwind: "$hospitalDetails"
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "doctorDetailsTemp.userId",
+            foreignField: "_id",
+            as: "doctorUserDetails"
+          }
+        },
+        {
+          $unwind: "$doctorUserDetails"
+        },
+        {
+          $addFields: {
+            doctorDetails: {
+              $mergeObjects: ["$doctorDetailsTemp", "$doctorUserDetails"]
+            }
+          }
+        },
+        {
+          $project: {
+            latLng: 0,
+            _id: 0,
+            startTimeStamp: 0,
+            endTimeStamp: 0,
+            userId: 0,
+            doctorId: 0,
+            scheduleId: 0,
+            bookedTimeStamp: 0,
+            doctorDetailsTemp: 0,
+            doctorUserDetails: 0,
+            "scheduleDetails._id": 0,
+            "scheduleDetails.tokens": 0,
+            "scheduleDetails.doctorId": 0,
+            "scheduleDetails.hospitalId": 0,
+            "hospitalDetails._id": 0,
+            "doctorDetails._id": 0,
+            "doctorDetails.userType": 0,
+            "doctorDetails.status": 0,
+            "doctorDetails.favorites": 0,
+            "doctorDetails.dateOfBirth": 0,
+            "doctorDetails.gender": 0,
+            "doctorDetails.password": 0,
+            "doctorDetails.username": 0,
+            "doctorDetails.yearsOfExperience": 0,
+            "doctorDetails.degree": 0,
+            "doctorDetails.userId": 0
+          }
+        }
+      ],
+      (err, bookings) => {
+        if (err) {
+          callback(err);
+        } else {
+          let currentBookings = [];
+          let pastBookings = [];
+          bookings.forEach(booking => {
+            const tokenDateMoment = _getMoment(booking.tokenDate);
+            const pastDayMoment = _getMoment(new Date()).subtract(12, "hours");
+            if (
+              !tokenDateMoment.isBefore(pastDayMoment) &&
+              utils.isStringsEqual(booking.status, tokenBookingStatus.BOOKED)
+            ) {
+              currentBookings.push(booking);
+            } else {
+              pastBookings.push(booking);
+            }
+          });
+          callback({ currentBookings, pastBookings });
+        }
+      }
+    );
   }
 };
 
@@ -789,33 +913,40 @@ function _updateTokenTableDocStatus(
   status
 ) {
   return new Promise((resolve, reject) => {
-    TokenTable.findOne(
-      { doctorId, scheduleId, tokenDate },
-      (err, tokenTableDoc) => {
-        let selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
-        if (
-          utils.isStringsEqual(selectedToken.status, tokenBookingStatus.BOOKED)
-        ) {
-          resolve(false);
-        } else {
-          selectedToken.status = status;
-          TokenTable.updateOne(
-            { doctorId, scheduleId, tokenDate },
-            {
-              $set: {
-                tokens: tokenTableDoc.tokens
+    if (utils.isEqual(tokenNumber, 0)) {
+      resolve(true);
+    } else {
+      TokenTable.findOne(
+        { doctorId, scheduleId, tokenDate },
+        (err, tokenTableDoc) => {
+          let selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
+          if (
+            utils.isStringsEqual(
+              selectedToken.status,
+              tokenBookingStatus.BOOKED
+            )
+          ) {
+            resolve(false);
+          } else {
+            selectedToken.status = status;
+            TokenTable.updateOne(
+              { doctorId, scheduleId, tokenDate },
+              {
+                $set: {
+                  tokens: tokenTableDoc.tokens
+                }
+              },
+              (err, raw) => {
+                if (err) {
+                  reject(false);
+                } else {
+                  resolve(true);
+                }
               }
-            },
-            (err, raw) => {
-              if (err) {
-                reject(false);
-              } else {
-                resolve(true);
-              }
-            }
-          );
+            );
+          }
         }
-      }
-    );
+      );
+    }
   });
 }

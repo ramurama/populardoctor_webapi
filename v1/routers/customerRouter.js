@@ -121,4 +121,14 @@ module.exports = app => {
       });
     }
   );
+
+  app.get(
+    routes.GET_BOOKING_HISTORY,
+    passport.authenticate("jwt", { session: false }),
+    (req, res) => {
+      customerService.getBookingHistory(req.user._id, data => {
+        res.send(data);
+      });
+    }
+  );
 };

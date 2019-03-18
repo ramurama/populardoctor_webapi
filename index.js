@@ -8,6 +8,7 @@ const bodyParser = require("body-parser");
 //v1 models
 require("./v1/models/User");
 require("./v1/models/MobileOtp");
+require("./v1/models/BookingOtp");
 require("./v1/models/Specialization");
 require("./v1/models/Location");
 require("./v1/models/Hospital");

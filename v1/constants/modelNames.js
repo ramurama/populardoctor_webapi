@@ -8,5 +8,6 @@ module.exports = {
   SCHEDULE: "schedules",
   TOKEN_TABLE: "token_tables",
   BOOKING: "bookings",
-  AUTO_NUMBER: "auto_numbers"
+  AUTO_NUMBER: "auto_numbers",
+  BOOKING_OTP: "booking_otps"
 };

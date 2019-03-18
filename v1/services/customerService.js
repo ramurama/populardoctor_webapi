@@ -9,6 +9,7 @@ const Schedule = mongoose.model(modelNames.SCHEDULE);
 const TokenTable = mongoose.model(modelNames.TOKEN_TABLE);
 const AutoNumber = mongoose.model(modelNames.AUTO_NUMBER);
 const Booking = mongoose.model(modelNames.BOOKING);
+const BookingOtp = mongoose.model(modelNames.BOOKING_OTP);
 const utils = require("../utils");
 const tokenBookingStatus = require("../constants/tokenBookingStatus");
 const moment = require("moment");
@@ -465,7 +466,14 @@ module.exports = {
           status
         })
         .then(res => {
-          callback(true, bookingId);
+          //generate OTP for this booking
+          const otp = utils.generateOtp();
+          BookingOtp.collection
+            .insertOne({ bookingId, otp })
+            .then(res => {
+              callback(true, bookingId);
+            })
+            .catch(err => console.log(err));
         })
         .catch(err => console.log(err));
     } else {
@@ -539,6 +547,17 @@ module.exports = {
           }
         },
         {
+          $lookup: {
+            from: "booking_otps",
+            localField: "bookingId",
+            foreignField: "bookingId",
+            as: "bookingOtp"
+          }
+        },
+        {
+          $unwind: "$bookingOtp"
+        },
+        {
           $project: {
             latLng: 0,
             _id: 0,
@@ -565,7 +584,9 @@ module.exports = {
             "doctorDetails.username": 0,
             "doctorDetails.yearsOfExperience": 0,
             "doctorDetails.degree": 0,
-            "doctorDetails.userId": 0
+            "doctorDetails.userId": 0,
+            "bookingOtp._id": 0,
+            "bookingOtp.bookingId": 0
           }
         }
       ],
@@ -576,10 +597,13 @@ module.exports = {
           let currentBookings = [];
           let pastBookings = [];
           bookings.forEach(booking => {
-            const tokenDateMoment = _getMoment(booking.tokenDate);
-            const pastDayMoment = _getMoment(new Date()).subtract(12, "hours");
+            const tokenEndMoment = _getDateTime(
+              booking.tokenDate,
+              booking.endTime
+            );
+            const nowMoment = _getMoment(new Date());
             if (
-              !tokenDateMoment.isBefore(pastDayMoment) &&
+              !nowMoment.isAfter(tokenEndMoment) &&
               utils.isStringsEqual(booking.status, tokenBookingStatus.BOOKED)
             ) {
               currentBookings.push(booking);

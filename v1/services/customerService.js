@@ -558,6 +558,11 @@ module.exports = {
           $unwind: "$bookingOtp"
         },
         {
+          $sort: {
+            bookedTimeStamp: -1
+          }
+        },
+        {
           $project: {
             latLng: 0,
             _id: 0,

@@ -611,6 +611,8 @@ module.exports = {
               !nowMoment.isAfter(tokenEndMoment) &&
               utils.isStringsEqual(booking.status, tokenBookingStatus.BOOKED)
             ) {
+              //bookings that are before the schedule end time and
+              //in BOOKED status only should listed under current bookings
               currentBookings.push(booking);
             } else {
               pastBookings.push(booking);

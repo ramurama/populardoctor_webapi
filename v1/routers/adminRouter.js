@@ -52,4 +52,18 @@ module.exports = app => {
       res.send(data);
     });
   });
+
+  app.post(routes.BLOCK_USER, (req, res) => {
+    const { userId } = req.body;
+    adminService.blockUser(userId, status => {
+      res.send({ status });
+    });
+  });
+
+  app.post(routes.UNBLOCK_USER, (req, res) => {
+    const { userId } = req.body;
+    adminService.unblockUser(userId, status => {
+      res.send({ status });
+    });
+  });
 };

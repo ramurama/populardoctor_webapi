@@ -25,6 +25,8 @@ module.exports = {
   GET_CUSTOMERS: "/api/v1/admin/getCustomers",
   GET_FRONTDESK_USERS: "/api/v1/admin/getFrontdeskUsers",
   GET_HOSPITALS: "/api/v1/admin/getHospitals",
+  BLOCK_USER: "/api/v1/admin/blockUser",
+  UNBLOCK_USER: "/api/v1/admin/unblockUser",
 
   //customer
   GET_SEARCH_CRITERIA: "/api/v1/customer/getSearchCriteria",

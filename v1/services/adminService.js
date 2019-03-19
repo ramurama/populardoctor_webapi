@@ -85,7 +85,7 @@ module.exports = {
     Hospital.collection
       .insertOne(hospital)
       .then(async res => {
-        if (await isLocationExists(location)) {
+        if (await _isLocationExists(location)) {
           //location already exists in Location collection
           callback(true);
         } else {
@@ -114,7 +114,7 @@ module.exports = {
    * @param {Function} callback
    */
   async createSchedule(scheduleData, callback) {
-    if (await isScheduleExists(scheduleData)) {
+    if (await _isScheduleExists(scheduleData)) {
       callback(false, "Schedule already exists.");
     } else {
       const {
@@ -143,7 +143,7 @@ module.exports = {
   },
 
   async createSpecialization(name, iconName, callback) {
-    if (await isSpecializationExists(name)) {
+    if (await _isSpecializationExists(name)) {
       callback(false, "Specialization already exists!");
     } else {
       if (utils.isNullOrEmpty(iconName)) {
@@ -209,7 +209,7 @@ module.exports = {
           }
         ],
         async (err, doctors) => {
-          const totalDocuments = await getUsersCount(userType.DOCTOR);
+          const totalDocuments = await _getUsersCount(userType.DOCTOR);
           const totalPages = Math.ceil(totalDocuments / limit);
           if (err) {
             callback({ status: false, doctors: [], totalPages: null });
@@ -248,7 +248,7 @@ module.exports = {
           if (err) {
             callback({ status: false, users: [], totalPages: null });
           } else {
-            const totalDocuments = await getUsersCount(userType);
+            const totalDocuments = await _getUsersCount(userType);
             const totalPages = Math.ceil(totalDocuments / limit);
             callback({ status: true, totalPages, users });
           }
@@ -282,22 +282,58 @@ module.exports = {
           if (err) {
             callback({ status: false, hospitals: [], totalPages: null });
           } else {
-            const totalDocuments = await getHospitalsCount(location);
+            const totalDocuments = await _getHospitalsCount(location);
             const totalPages = Math.ceil(totalDocuments / limit);
             callback({ status: true, totalPages, hospitals });
           }
         }
       );
     }
+  },
+
+  /**
+   * blockUser method is used to block the user from logging in to the system.
+   *
+   * @param {String} userId
+   * @param {Function} callback
+   */
+  async blockUser(userId, callback) {
+    const updateStatus = await _updateUserStatus(
+      userId,
+      activationStatus.INACTIVE
+    );
+    if (updateStatus) {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  },
+
+  /**
+   * unblockUser method is used to unblock the user, allowing to log in into the system.
+   *
+   * @param {String} userId
+   * @param {String} callback
+   */
+  async unblockUser(userId, callback) {
+    const updateStatus = await _updateUserStatus(
+      userId,
+      activationStatus.ACTIVE
+    );
+    if (updateStatus) {
+      callback(true);
+    } else {
+      callback(false);
+    }
   }
 };
 
 /**
- * isLocationExists method returns true if the location already exists, return false otherwise.
+ * _isLocationExists method returns true if the location already exists, return false otherwise.
  *
  * @param {String} name
  */
-function isLocationExists(name) {
+function _isLocationExists(name) {
   return new Promise((resolve, reject) => {
     Location.findOne({ name }, (err, location) => {
       if (err) {
@@ -314,12 +350,12 @@ function isLocationExists(name) {
 }
 
 /**
- * isScheduleExists method checks if the given schedule already exists.
+ * _isScheduleExists method checks if the given schedule already exists.
  * If exists returns true, returns false otherwise.
  *
  * @param {Object} scheduleData
  */
-function isScheduleExists(scheduleData) {
+function _isScheduleExists(scheduleData) {
   const { doctorId, hospitalId, weekday, startTime, endTime } = scheduleData;
   return new Promise((resolve, reject) => {
     Schedule.findOne(
@@ -340,12 +376,12 @@ function isScheduleExists(scheduleData) {
 }
 
 /**
- * isSpecializationExists method returns true if the given specialization already exists.
+ * _isSpecializationExists method returns true if the given specialization already exists.
  * Returns false otherwise.
  *
  * @param {String} name
  */
-function isSpecializationExists(name) {
+function _isSpecializationExists(name) {
   return new Promise((resolve, reject) => {
     Specialization.findOne({ name }, (err, specialization) => {
       if (err) {
@@ -362,11 +398,11 @@ function isSpecializationExists(name) {
 }
 
 /**
- * getUsersCount method returns the total count of users.
+ * _getUsersCount method returns the total count of users.
  *
  * @param {String} userType
  */
-function getUsersCount(userType) {
+function _getUsersCount(userType) {
   return new Promise((resolve, reject) => {
     User.find({ userType }, (err, users) => {
       if (err) {
@@ -379,9 +415,9 @@ function getUsersCount(userType) {
 }
 
 /**
- * getHospitalsCount method returns the total number of hospitals available
+ * _getHospitalsCount method returns the total number of hospitals available
  */
-function getHospitalsCount(location) {
+function _getHospitalsCount(location) {
   let find = {};
   if (!utils.isStringsEqual(location, "all")) {
     find = { location };
@@ -392,6 +428,24 @@ function getHospitalsCount(location) {
         reject(err);
       } else {
         resolve(hospitals.length);
+      }
+    });
+  });
+}
+
+/**
+ * _updateUserStatus mehod is used to updated the user's activation status.
+ *
+ * @param {String} userId
+ * @param {String} status
+ */
+function _updateUserStatus(userId, status) {
+  return new Promise((resolve, reject) => {
+    User.updateOne({ _id: userId }, { $set: { status } }, (err, raw) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(true);
       }
     });
   });

@@ -41,5 +41,6 @@ module.exports = {
   GET_BOOKING_HISTORY: "/api/v1/customer/getBookingHistory",
 
   //doctor
+  GET_NEXT_DAY_SCHEDULE_CONFIRMATIONS: "/api/v1/doctor/getNextDayConfirmations",
   CONFIRM_SCHEDULE: "/api/v1/doctor/confirmSchedule"
 };

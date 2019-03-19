@@ -30,6 +30,8 @@ module.exports = {
   DELETE_SCHEDULE: "/api/v1/admin/deleteSchedule",
   DELETE_TOKEN: "/api/v1/admin/deleteToken",
   ADD_TOKEN: "/api/v1/admin/addToken",
+  GET_BOOKING_HISTORY_ADMIN: "/api/v1/admin/getBookingHistory",
+  GET_BOOKING_HISTORY_DETAIL_ADMIN: "/api/v1/admin/getBookingHistoryDetail",
 
   //customer
   GET_SEARCH_CRITERIA: "/api/v1/customer/getSearchCriteria",

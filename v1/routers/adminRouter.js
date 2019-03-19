@@ -87,4 +87,20 @@ module.exports = app => {
       res.send({ status, message });
     });
   });
+
+  app.get(routes.GET_BOOKING_HISTORY_ADMIN + "/:pageNo/:size", (req, res) => {
+    adminService.getBookingHistory(req.params, data => {
+      res.send(data);
+    });
+  });
+
+  app.get(
+    routes.GET_BOOKING_HISTORY_DETAIL_ADMIN + "/:bookingId",
+    (req, res) => {
+      const { bookingId } = req.params;
+      adminService.getBookingHistoryDetail(bookingId, data => {
+        res.send(data);
+      });
+    }
+  );
 };

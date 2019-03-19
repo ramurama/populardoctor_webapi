@@ -52,4 +52,55 @@ module.exports = app => {
       res.send(data);
     });
   });
+
+  app.post(routes.BLOCK_USER, (req, res) => {
+    const { userId } = req.body;
+    adminService.blockUser(userId, status => {
+      res.send({ status });
+    });
+  });
+
+  app.post(routes.UNBLOCK_USER, (req, res) => {
+    const { userId } = req.body;
+    adminService.unblockUser(userId, status => {
+      res.send({ status });
+    });
+  });
+
+  app.delete(routes.DELETE_SCHEDULE + "/:scheduleId", (req, res) => {
+    const { scheduleId } = req.params;
+    adminService.deleteSchedule(scheduleId, status => {
+      res.send({ status });
+    });
+  });
+
+  app.delete(routes.DELETE_TOKEN + "/:scheduleId/:tokenNumber", (req, res) => {
+    const { scheduleId, tokenNumber } = req.params;
+    adminService.deleteToken(scheduleId, tokenNumber, status => {
+      res.send({ status });
+    });
+  });
+
+  app.post(routes.ADD_TOKEN, (req, res) => {
+    const { scheduleId, token } = req.body;
+    adminService.addToken(scheduleId, token, (status, message) => {
+      res.send({ status, message });
+    });
+  });
+
+  app.get(routes.GET_BOOKING_HISTORY_ADMIN + "/:pageNo/:size", (req, res) => {
+    adminService.getBookingHistory(req.params, data => {
+      res.send(data);
+    });
+  });
+
+  app.get(
+    routes.GET_BOOKING_HISTORY_DETAIL_ADMIN + "/:bookingId",
+    (req, res) => {
+      const { bookingId } = req.params;
+      adminService.getBookingHistoryDetail(bookingId, data => {
+        res.send(data);
+      });
+    }
+  );
 };

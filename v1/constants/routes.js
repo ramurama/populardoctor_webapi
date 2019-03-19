@@ -25,17 +25,27 @@ module.exports = {
   GET_CUSTOMERS: "/api/v1/admin/getCustomers",
   GET_FRONTDESK_USERS: "/api/v1/admin/getFrontdeskUsers",
   GET_HOSPITALS: "/api/v1/admin/getHospitals",
+  BLOCK_USER: "/api/v1/admin/blockUser",
+  UNBLOCK_USER: "/api/v1/admin/unblockUser",
+  DELETE_SCHEDULE: "/api/v1/admin/deleteSchedule",
+  DELETE_TOKEN: "/api/v1/admin/deleteToken",
+  ADD_TOKEN: "/api/v1/admin/addToken",
+  GET_BOOKING_HISTORY_ADMIN: "/api/v1/admin/getBookingHistory",
+  GET_BOOKING_HISTORY_DETAIL_ADMIN: "/api/v1/admin/getBookingHistoryDetail",
 
   //customer
   GET_SEARCH_CRITERIA: "/api/v1/customer/getSearchCriteria",
+  ADD_FAVORITE: "/api/v1/customer/addFavorite",
+  REMOVE_FAVORITE: "/api/v1/customer/removeFavorite",
+  GET_FAVORITES: "/api/v1/customer/getFavorites",
   GET_DOCTORS_LIST: "/api/v1/customer/getDoctorsList",
   GET_DOCTOR_SCHEDULES: "/api/v1/customer/getSchedules",
   GET_TOKENS: "/api/v1/customer/getTokens",
   BLOCK_TOKEN: "/api/v1/customer/blockToken",
-  ADD_FAVORITE: "/api/v1/customer/addFavorite",
-  REMOVE_FAVORITE: "/api/v1/customer/removeFavorite",
-  GET_FAVORITES: "/api/v1/customer/getFavorites",
+  BOOK_TOKEN: "/api/v1/customer/bookToken",
+  GET_BOOKING_HISTORY: "/api/v1/customer/getBookingHistory",
 
   //doctor
+  GET_NEXT_DAY_SCHEDULE_CONFIRMATIONS: "/api/v1/doctor/getNextDayConfirmations",
   CONFIRM_SCHEDULE: "/api/v1/doctor/confirmSchedule"
 };

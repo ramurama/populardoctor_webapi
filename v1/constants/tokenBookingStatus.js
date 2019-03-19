@@ -2,5 +2,7 @@ module.exports = {
   OPEN: "OPEN",
   BLOCKED: "BLOCKED",
   BOOKED: "BOOKED",
-  CLOSED: "CLOSED"
+  CLOSED: "CLOSED",
+  VISITED: "VISITED",
+  CANCELLED: "CANCELLED"
 };

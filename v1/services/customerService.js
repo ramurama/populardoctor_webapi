@@ -7,12 +7,17 @@ const Hospital = mongoose.model(modelNames.HOSPITAL);
 const Location = mongoose.model(modelNames.LOCATION);
 const Schedule = mongoose.model(modelNames.SCHEDULE);
 const TokenTable = mongoose.model(modelNames.TOKEN_TABLE);
+const AutoNumber = mongoose.model(modelNames.AUTO_NUMBER);
+const Booking = mongoose.model(modelNames.BOOKING);
+const BookingOtp = mongoose.model(modelNames.BOOKING_OTP);
 const utils = require("../utils");
 const tokenBookingStatus = require("../constants/tokenBookingStatus");
 const moment = require("moment");
 const momentTz = require("moment-timezone");
 const CronJob = require("cron").CronJob;
 const operations = require("../constants/operation");
+
+const BOOKING_TIME_LIMIT = 4; //4 hours
 
 module.exports = {
   /**
@@ -65,6 +70,92 @@ module.exports = {
         }
       });
     });
+  },
+
+  /**
+   * addFavorite method adds the new userId of a doctor to the favorites list of the given user.
+   *
+   * @param {String} mobile
+   * @param {String} userId
+   * @param {Function} callback
+   */
+  async addFavorite(mobile, userId, callback) {
+    try {
+      const favorites = await _updateFavorites(mobile, userId, operations.ADD);
+      callback(true, favorites);
+    } catch (err) {
+      callback(false, null);
+    }
+  },
+
+  /**
+   * removeFavorite method removes the userId of the doctor from the favorites list of the given user.
+   *
+   * @param {String} mobile
+   * @param {String} userId
+   * @param {Function} callback
+   */
+  async removeFavorite(mobile, userId, callback) {
+    try {
+      const favorites = await _updateFavorites(
+        mobile,
+        userId,
+        operations.REMOVE
+      );
+      callback(true, favorites);
+    } catch (err) {
+      callback(false, null);
+    }
+  },
+
+  /**
+   * getFavorites method fetches a list of doctors matching the favoritesArray.
+   *
+   * @param {Array} favoritesArray
+   * @param {Function} callback
+   */
+  getFavoriteDoctors(favoritesArray, callback) {
+    Doctor.aggregate(
+      [
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "doctorDetails"
+          }
+        },
+        {
+          $unwind: "$doctorDetails"
+        },
+        {
+          $project: {
+            "doctorDetails._id": 0,
+            "doctorDetails.password": 0,
+            "doctorDetails.username": 0,
+            "doctorDetails.userType": 0,
+            "doctorDetails.status": 0,
+            "doctorDetails.favorites": 0,
+            "doctorDetails.dateOfBirth": 0,
+            yearsOfExperience: 0
+          }
+        }
+      ],
+      (err, favoriteDoctors) => {
+        if (err) {
+          callback([]);
+        } else {
+          const favorites = favoriteDoctors
+            .map(doctor => {
+              if (favoritesArray.includes(doctor.userId.toString())) {
+                return doctor;
+              }
+            })
+            .filter(element => !utils.isUndefined(element));
+          callback(favorites);
+        }
+      }
+    );
   },
 
   /**
@@ -172,7 +263,8 @@ module.exports = {
         },
         {
           $match: {
-            doctorId: mongoose.Types.ObjectId(doctorId)
+            doctorId: mongoose.Types.ObjectId(doctorId),
+            isDeleted: false
           }
         },
         {
@@ -266,52 +358,52 @@ module.exports = {
           } else {
             const { tokens } = tokenTableDoc;
             //iterate and find the user selected token
-            const selectedToken = tokens.find(token => {
-              if (utils.isEqual(token.number, tokenNumber)) {
-                return token;
-              }
-            });
+            const selectedToken = _findToken(tokens, tokenNumber);
             //check if the status of the selected token is already BLOCKED.
             //if so, return status as false with a message.
-            if (
-              utils.isStringsEqual(
-                selectedToken.status,
-                tokenBookingStatus.BLOCKED
-              )
-            ) {
-              callback(
-                false,
-                "Selected token has been blocked by someone. Please try again after sometime."
-              );
+            if (utils.isEqual(tokenNumber, 0)) {
+              callback(true, null);
             } else {
-              //if the satus of the token is OPEN, set the status to BLOCKED
-              selectedToken.status = tokenBookingStatus.BLOCKED;
-              //update the status in token table
-              TokenTable.updateOne(
-                { doctorId, scheduleId, tokenDate },
-                {
-                  $set: {
-                    tokens
+              if (
+                utils.isStringsEqual(
+                  selectedToken.status,
+                  tokenBookingStatus.BLOCKED
+                )
+              ) {
+                callback(
+                  false,
+                  "Selected token has been blocked by someone. Please try again after sometime."
+                );
+              } else {
+                //if the satus of the token is OPEN, set the status to BLOCKED
+                selectedToken.status = tokenBookingStatus.BLOCKED;
+                //update the status in token table
+                TokenTable.updateOne(
+                  { doctorId, scheduleId, tokenDate },
+                  {
+                    $set: {
+                      tokens
+                    }
+                  },
+                  (err, raw) => {
+                    if (err) {
+                      callback(false);
+                    } else {
+                      //create a cron job for checking after 3 minutes if the token is in blocked state
+                      _createCronJob(
+                        doctorId,
+                        scheduleId,
+                        tokenDate,
+                        tokenNumber
+                      );
+                      console.log(
+                        "Token number: " + tokenNumber + " has been blocked."
+                      );
+                      callback(true, null);
+                    }
                   }
-                },
-                (err, raw) => {
-                  if (err) {
-                    callback(false);
-                  } else {
-                    //create a cron job for checking after 3 minutes if the token is in blocked state
-                    _createCronJob(
-                      doctorId,
-                      scheduleId,
-                      tokenDate,
-                      tokenNumber
-                    );
-                    console.log(
-                      "Token number: " + tokenNumber + " has been blocked."
-                    );
-                    callback(true, null);
-                  }
-                }
-              );
+                );
+              }
             }
           }
         }
@@ -320,86 +412,214 @@ module.exports = {
   },
 
   /**
-   * addFavorite method adds the new userId of a doctor to the favorites list of the given user.
+   * bookToken updates the status of the token in tokenTableDoc.
+   * It then adds a new document to the BOOKINGS collection.
    *
-   * @param {String} mobile
-   * @param {String} userId
+   * @param {Object} bookingData
    * @param {Function} callback
    */
-  async addFavorite(mobile, userId, callback) {
-    try {
-      const favorites = await _updateFavorites(mobile, userId, operations.ADD);
-      callback(true, favorites);
-    } catch (err) {
-      callback(false, null);
-    }
-  },
-
-  /**
-   * removeFavorite method removes the userId of the doctor from the favorites list of the given user.
-   *
-   * @param {String} mobile
-   * @param {String} userId
-   * @param {Function} callback
-   */
-  async removeFavorite(mobile, userId, callback) {
-    try {
-      const favorites = await _updateFavorites(
-        mobile,
-        userId,
-        operations.REMOVE
+  async bookToken(bookingData, callback) {
+    const {
+      userId,
+      doctorId,
+      scheduleId,
+      tokenDate,
+      tokenNumber,
+      latLng
+    } = bookingData;
+    const status = tokenBookingStatus.BOOKED;
+    const isTokenTableDocUpdated = await _updateTokenTableDocStatus(
+      doctorId,
+      scheduleId,
+      tokenDate,
+      tokenNumber,
+      status
+    );
+    if (isTokenTableDocUpdated) {
+      const tokenTableDoc = await _getTokenTableData(
+        doctorId,
+        scheduleId,
+        tokenDate
       );
-      callback(true, favorites);
-    } catch (err) {
+      const { startTime, endTime } = tokenTableDoc;
+      const startTimeStamp = _getDateTime(tokenDate, startTime)
+        .subtract(BOOKING_TIME_LIMIT, "hours")
+        .toDate();
+      const endTimeStamp = _getDateTime(tokenDate, endTime).toDate();
+      const selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
+      delete selectedToken.status;
+      const bookingId = await _getAutoNumber();
+      const bookedTimeStamp = new Date();
+      Booking.collection
+        .insertOne({
+          bookingId,
+          userId,
+          doctorId: mongoose.Types.ObjectId(doctorId),
+          scheduleId: mongoose.Types.ObjectId(scheduleId),
+          tokenDate: new Date(tokenDate),
+          token: selectedToken,
+          startTime,
+          endTime,
+          latLng,
+          startTimeStamp,
+          endTimeStamp,
+          bookedTimeStamp,
+          status
+        })
+        .then(res => {
+          //generate OTP for this booking
+          const otp = utils.generateOtp();
+          BookingOtp.collection
+            .insertOne({ bookingId, otp })
+            .then(res => {
+              callback(true, bookingId);
+            })
+            .catch(err => console.log(err));
+        })
+        .catch(err => console.log(err));
+    } else {
       callback(false, null);
     }
   },
 
   /**
-   * getFavorites method fetches a list of doctors matching the favoritesArray.
+   * getBookingHistory method fetches all the booking data given a userId.
    *
-   * @param {Array} favoritesArray
+   * @param {String} userId
    * @param {Function} callback
    */
-  getFavoriteDoctors(favoritesArray, callback) {
-    Doctor.aggregate(
+  getBookingHistory(userId, callback) {
+    Booking.aggregate(
       [
         {
           $lookup: {
-            from: "users",
-            localField: "userId",
+            from: "doctors",
+            localField: "doctorId",
             foreignField: "_id",
-            as: "doctorDetails"
+            as: "doctorDetailsTemp"
           }
         },
         {
-          $unwind: "$doctorDetails"
+          $match: {
+            userId
+          }
+        },
+        {
+          $unwind: "$doctorDetailsTemp"
+        },
+        {
+          $lookup: {
+            from: "schedules",
+            localField: "scheduleId",
+            foreignField: "_id",
+            as: "scheduleDetails"
+          }
+        },
+        {
+          $unwind: "$scheduleDetails"
+        },
+        {
+          $lookup: {
+            from: "hospitals",
+            localField: "scheduleDetails.hospitalId",
+            foreignField: "_id",
+            as: "hospitalDetails"
+          }
+        },
+        {
+          $unwind: "$hospitalDetails"
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "doctorDetailsTemp.userId",
+            foreignField: "_id",
+            as: "doctorUserDetails"
+          }
+        },
+        {
+          $unwind: "$doctorUserDetails"
+        },
+        {
+          $addFields: {
+            doctorDetails: {
+              $mergeObjects: ["$doctorDetailsTemp", "$doctorUserDetails"]
+            }
+          }
+        },
+        {
+          $lookup: {
+            from: "booking_otps",
+            localField: "bookingId",
+            foreignField: "bookingId",
+            as: "bookingOtp"
+          }
+        },
+        {
+          $unwind: "$bookingOtp"
+        },
+        {
+          $sort: {
+            bookedTimeStamp: -1
+          }
         },
         {
           $project: {
+            latLng: 0,
+            _id: 0,
+            startTimeStamp: 0,
+            endTimeStamp: 0,
+            userId: 0,
+            doctorId: 0,
+            scheduleId: 0,
+            bookedTimeStamp: 0,
+            doctorDetailsTemp: 0,
+            doctorUserDetails: 0,
+            "scheduleDetails._id": 0,
+            "scheduleDetails.tokens": 0,
+            "scheduleDetails.doctorId": 0,
+            "scheduleDetails.hospitalId": 0,
+            "hospitalDetails._id": 0,
             "doctorDetails._id": 0,
-            "doctorDetails.password": 0,
-            "doctorDetails.username": 0,
             "doctorDetails.userType": 0,
             "doctorDetails.status": 0,
             "doctorDetails.favorites": 0,
             "doctorDetails.dateOfBirth": 0,
-            yearsOfExperience: 0
+            "doctorDetails.gender": 0,
+            "doctorDetails.password": 0,
+            "doctorDetails.username": 0,
+            "doctorDetails.yearsOfExperience": 0,
+            "doctorDetails.degree": 0,
+            "doctorDetails.userId": 0,
+            "bookingOtp._id": 0,
+            "bookingOtp.bookingId": 0
           }
         }
       ],
-      (err, favoriteDoctors) => {
+      (err, bookings) => {
         if (err) {
-          callback([]);
+          callback(err);
         } else {
-          const favorites = favoriteDoctors
-            .map(doctor => {
-              if (favoritesArray.includes(doctor.userId.toString())) {
-                return doctor;
-              }
-            })
-            .filter(element => !utils.isUndefined(element));
-          callback(favorites);
+          let currentBookings = [];
+          let pastBookings = [];
+          bookings.forEach(booking => {
+            const tokenEndMoment = _getDateTime(
+              booking.tokenDate,
+              booking.endTime
+            );
+            const nowMoment = _getMoment(new Date());
+            if (
+              !nowMoment.isAfter(tokenEndMoment) &&
+              utils.isStringsEqual(booking.status, tokenBookingStatus.BOOKED)
+            ) {
+              //bookings that are before the schedule end time and
+              //in BOOKED status only should listed under current bookings
+              currentBookings.push(booking);
+            } else {
+              pastBookings.push(booking);
+            }
+          });
+          callback({ currentBookings, pastBookings });
         }
       }
     );
@@ -475,8 +695,6 @@ function _getAvailabilityStatus(doctorId) {
  * @param {Object} tokenTableDoc
  */
 function _computeAvailabilityStatus(tokenTableDoc) {
-  const BOOKING_TIME_LIMIT = 4; //4 hours
-
   // process.env.TZ = "Asia/Calcutta|Asia/Kolkata";
 
   const now = new Date();
@@ -516,6 +734,7 @@ function _computeAvailabilityStatus(tokenTableDoc) {
 function _getMoment(time) {
   return momentTz.tz(time, "Asia/Calcutta");
 }
+
 function _get24HrFormatTime(time) {
   return moment(time, ["h:mm A"]).format("HH:mm");
 }
@@ -593,6 +812,14 @@ function _updateTokenStatus(doctorId, scheduleId, tokenDate, tokenNumber) {
   );
 }
 
+/**
+ * _updateFavorites method adds/removes a userId of the  doctor
+ * to the favorites array of the passed mobile(username).
+ *
+ * @param {String} mobile
+ * @param {String} userId
+ * @param {String} operation
+ */
 function _updateFavorites(mobile, userId, operation) {
   return new Promise((resolve, reject) => {
     User.findOne({ username: mobile }, (err, user) => {
@@ -630,5 +857,128 @@ function _updateFavorites(mobile, userId, operation) {
         }
       }
     });
+  });
+}
+
+/**
+ * _getAutoNumber method fetches the number from collection.
+ * It then increments the number by one and is saved to the same document in the collection.
+ */
+function _getAutoNumber() {
+  return new Promise((resolve, reject) => {
+    AutoNumber.find({}, (err, numbers) => {
+      if (err) {
+        reject(err);
+      } else {
+        const { number } = numbers[0];
+        const nextNumber = number + 1;
+        AutoNumber.updateOne(
+          { number },
+          {
+            $set: {
+              number: nextNumber
+            }
+          },
+          (err, raw) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(number);
+            }
+          }
+        );
+      }
+    });
+  });
+}
+
+/**
+ * _findToken method finds and returns the token from the given array of tokens.
+ *
+ * @param {Array} tokens
+ * @param {Number} tokenNumber
+ */
+function _findToken(tokens, tokenNumber) {
+  return tokens.find(token => {
+    if (utils.isEqual(token.number, tokenNumber)) {
+      return token;
+    }
+  });
+}
+
+/**
+ * _getTokenTableData method returns a tokenTable document for the given params
+ *
+ * @param {String} doctorId
+ * @param {String} scheduleId
+ * @param {String} tokenDate
+ */
+function _getTokenTableData(doctorId, scheduleId, tokenDate) {
+  return new Promise((resolve, reject) => {
+    TokenTable.findOne(
+      { doctorId, scheduleId, tokenDate },
+      (err, tokenTableDoc) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(tokenTableDoc);
+        }
+      }
+    );
+  });
+}
+
+/**
+ * __updateTokenTableDocStatus method updates the status of the token to the passed status
+ *
+ * @param {String} doctorId
+ * @param {String} scheduleId
+ * @param {String} tokenDate
+ * @param {Number} tokenNumber
+ * @param {String} status
+ */
+function _updateTokenTableDocStatus(
+  doctorId,
+  scheduleId,
+  tokenDate,
+  tokenNumber,
+  status
+) {
+  return new Promise((resolve, reject) => {
+    if (utils.isEqual(tokenNumber, 0)) {
+      resolve(true);
+    } else {
+      TokenTable.findOne(
+        { doctorId, scheduleId, tokenDate },
+        (err, tokenTableDoc) => {
+          let selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
+          if (
+            utils.isStringsEqual(
+              selectedToken.status,
+              tokenBookingStatus.BOOKED
+            )
+          ) {
+            resolve(false);
+          } else {
+            selectedToken.status = status;
+            TokenTable.updateOne(
+              { doctorId, scheduleId, tokenDate },
+              {
+                $set: {
+                  tokens: tokenTableDoc.tokens
+                }
+              },
+              (err, raw) => {
+                if (err) {
+                  reject(false);
+                } else {
+                  resolve(true);
+                }
+              }
+            );
+          }
+        }
+      );
+    }
   });
 }

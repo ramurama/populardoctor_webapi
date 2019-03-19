@@ -6,5 +6,8 @@ module.exports = {
   HOSPITAL: "hospitals",
   DOCTOR: "doctors",
   SCHEDULE: "schedules",
-  TOKEN_TABLE: "token_tables"
+  TOKEN_TABLE: "token_tables",
+  BOOKING: "bookings",
+  AUTO_NUMBER: "auto_numbers",
+  BOOKING_OTP: "booking_otps"
 };

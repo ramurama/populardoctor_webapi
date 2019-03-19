@@ -107,4 +107,28 @@ module.exports = app => {
       });
     }
   );
+
+  app.post(
+    routes.BOOK_TOKEN,
+    passport.authenticate("jwt", { session: false }),
+    (req, res) => {
+      const bookingData = {
+        ...req.body,
+        userId: req.user._id
+      };
+      customerService.bookToken(bookingData, (status, bookingId) => {
+        res.send({ status, bookingId });
+      });
+    }
+  );
+
+  app.get(
+    routes.GET_BOOKING_HISTORY,
+    passport.authenticate("jwt", { session: false }),
+    (req, res) => {
+      customerService.getBookingHistory(req.user._id, data => {
+        res.send(data);
+      });
+    }
+  );
 };

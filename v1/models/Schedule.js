@@ -38,6 +38,10 @@ const scheduleSchema = new Schema({
   tokens: {
     type: Array,
     required: true
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
   }
 });
 

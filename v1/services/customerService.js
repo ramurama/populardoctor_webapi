@@ -263,7 +263,8 @@ module.exports = {
         },
         {
           $match: {
-            doctorId: mongoose.Types.ObjectId(doctorId)
+            doctorId: mongoose.Types.ObjectId(doctorId),
+            isDeleted: false
           }
         },
         {

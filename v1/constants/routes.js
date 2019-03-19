@@ -27,6 +27,9 @@ module.exports = {
   GET_HOSPITALS: "/api/v1/admin/getHospitals",
   BLOCK_USER: "/api/v1/admin/blockUser",
   UNBLOCK_USER: "/api/v1/admin/unblockUser",
+  DELETE_SCHEDULE: "/api/v1/admin/deleteSchedule",
+  DELETE_TOKEN: "/api/v1/admin/deleteToken",
+  ADD_TOKEN: "/api/v1/admin/addToken",
 
   //customer
   GET_SEARCH_CRITERIA: "/api/v1/customer/getSearchCriteria",

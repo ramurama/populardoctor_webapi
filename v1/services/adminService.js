@@ -133,6 +133,7 @@ module.exports = {
       schedule.startTime = startTime;
       schedule.endTime = endTime;
       schedule.tokens = tokens;
+      schedule.isDeleted = false;
       Schedule.collection
         .insertOne(schedule)
         .then(res => callback(true, "Schedule created successfully."))
@@ -325,6 +326,102 @@ module.exports = {
     } else {
       callback(false);
     }
+  },
+
+  /**
+   * deleteSchedule method is used to delete a schedule.
+   * A new parameter - isDeleted will be added to the document.
+   * isDeleted will be set to true.
+   *
+   * @param {String} scheduleId
+   * @param {Function} callback
+   */
+  deleteSchedule(scheduleId, callback) {
+    Schedule.updateOne(
+      { _id: scheduleId },
+      { $set: { isDeleted: true } },
+      (err, raw) => {
+        if (err) {
+          callback(false);
+        } else {
+          callback(true);
+        }
+      }
+    );
+  },
+
+  /**
+   * addToken method adds a new token to the schedule.
+   *
+   * @param {String} scheduleId
+   * @param {Object} token
+   * @param {Function} callback
+   */
+  addToken(scheduleId, token, callback) {
+    Schedule.findOne({ _id: scheduleId }, (err, schedule) => {
+      let tokens = schedule.tokens;
+      if (err) {
+        callback(false, "Unknown error!");
+      } else {
+        const tokenIndex = _findTokenIndex(tokens, token.number);
+        if (utils.isEqual(tokenIndex, -1)) {
+          tokens.push(token);
+          Schedule.updateOne(
+            { _id: scheduleId },
+            {
+              $set: {
+                tokens
+              }
+            },
+            (err, raw) => {
+              if (err) {
+                callback(false, "Unknown error!");
+              } else {
+                callback(true, "Token added successfully.");
+              }
+            }
+          );
+        } else {
+          callback(false, "Token number exists!");
+        }
+      }
+    });
+  },
+
+  /**
+   * deleteToken method is used to delete a token.
+   *
+   * @param {String} scheduleId
+   * @param {Number} tokenNumber
+   * @param {Function} callback
+   */
+  deleteToken(scheduleId, tokenNumber, callback) {
+    Schedule.findOne({ _id: scheduleId }, (err, schedule) => {
+      if (err) {
+        callback(false);
+      } else {
+        let tokens = schedule.tokens;
+        const tokenIndex = _findTokenIndex(tokens, parseInt(tokenNumber));
+        tokens.splice(tokenIndex, 1);
+        Schedule.updateOne(
+          {
+            _id: scheduleId
+          },
+          {
+            $set: {
+              tokens
+            }
+          },
+          (err, raw) => {
+            if (err) {
+              callback(false);
+            } else {
+              callback(true);
+            }
+          }
+        );
+      }
+    });
   }
 };
 
@@ -448,5 +545,17 @@ function _updateUserStatus(userId, status) {
         resolve(true);
       }
     });
+  });
+}
+
+/**
+ * _findToken method finds and returns the token from the given array of tokens.
+ *
+ * @param {Array} tokens
+ * @param {Number} tokenNumber
+ */
+function _findTokenIndex(tokens, tokenNumber) {
+  return tokens.findIndex(token => {
+    return utils.isEqual(token.number, parseInt(tokenNumber));
   });
 }

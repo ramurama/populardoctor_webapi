@@ -66,4 +66,25 @@ module.exports = app => {
       res.send({ status });
     });
   });
+
+  app.delete(routes.DELETE_SCHEDULE + "/:scheduleId", (req, res) => {
+    const { scheduleId } = req.params;
+    adminService.deleteSchedule(scheduleId, status => {
+      res.send({ status });
+    });
+  });
+
+  app.delete(routes.DELETE_TOKEN + "/:scheduleId/:tokenNumber", (req, res) => {
+    const { scheduleId, tokenNumber } = req.params;
+    adminService.deleteToken(scheduleId, tokenNumber, status => {
+      res.send({ status });
+    });
+  });
+
+  app.post(routes.ADD_TOKEN, (req, res) => {
+    const { scheduleId, token } = req.body;
+    adminService.addToken(scheduleId, token, (status, message) => {
+      res.send({ status, message });
+    });
+  });
 };

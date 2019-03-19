@@ -15,6 +15,10 @@ const hospitalSchema = new Schema({
     type: "string",
     required: true
   },
+  landmark: {
+    type: "string",
+    required: true
+  },
   pincode: {
     type: "string",
     required: true

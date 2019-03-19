@@ -74,13 +74,14 @@ module.exports = {
    * @param {Function} callback
    */
   createHospital(hospitalData, callback) {
-    const { name, address, location, pincode } = hospitalData;
+    const { name, address, location, pincode, landmark } = hospitalData;
     //hospital document
     let hospital = new Hospital();
     hospital.name = name;
     hospital.address = address;
     hospital.location = location;
     hospital.pincode = pincode;
+    hospital.landmark = landmark;
     Hospital.collection
       .insertOne(hospital)
       .then(async res => {

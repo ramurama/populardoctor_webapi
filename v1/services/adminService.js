@@ -143,6 +143,13 @@ module.exports = {
     }
   },
 
+  /**
+   * createSpecialization method is used to create specialization.
+   *
+   * @param {String} name
+   * @param {String} iconName
+   * @param {Function} callback
+   */
   async createSpecialization(name, iconName, callback) {
     if (await _isSpecializationExists(name)) {
       callback(false, "Specialization already exists!");
@@ -258,6 +265,13 @@ module.exports = {
     }
   },
 
+  /**
+   * getHospitals method returns a list of hospitals with respect to pagination params.
+   *
+   * @param {String} location
+   * @param {Object} pagination
+   * @param {Function} callback
+   */
   getHospitals(location, pagination, callback) {
     let find = {};
     if (!utils.isStringsEqual(location, "all")) {

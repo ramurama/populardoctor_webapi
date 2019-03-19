@@ -3,6 +3,7 @@ const modelNames = require("../constants/modelNames");
 const Doctor = mongoose.model(modelNames.DOCTOR);
 const TokenTable = mongoose.model(modelNames.TOKEN_TABLE);
 const Schedule = mongoose.model(modelNames.SCHEDULE);
+const Booking = mongoose.model(modelNames.BOOKING);
 const tokenBookingStatus = require("../constants/tokenBookingStatus");
 const utils = require("../utils");
 const moment = require("moment");
@@ -87,6 +88,98 @@ module.exports = {
           //   tokenDate
           // );
           callback({ schedules, tokenDate });
+        }
+      }
+    );
+  },
+
+  /**
+   * getBookingHistory method fetches all the list of bookings for the given doctor's userId.
+   *
+   * @param {String} userId
+   * @param {Function} callback
+   */
+  async getBookingHistory(userId, callback) {
+    const doctorId = await _getDoctorIdByUserId(userId);
+    Booking.aggregate(
+      [
+        {
+          $match: {
+            doctorId: mongoose.Types.ObjectId(doctorId)
+          }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "userDetails"
+          }
+        },
+        {
+          $unwind: "$userDetails"
+        },
+        {
+          $lookup: {
+            from: "schedules",
+            localField: "scheduleId",
+            foreignField: "_id",
+            as: "scheduleDetails"
+          }
+        },
+        {
+          $unwind: "$scheduleDetails"
+        },
+        {
+          $lookup: {
+            from: "hospitals",
+            localField: "scheduleDetails.hospitalId",
+            foreignField: "_id",
+            as: "hospitalDetails"
+          }
+        },
+        {
+          $unwind: "$hospitalDetails"
+        },
+        {
+          $sort: {
+            bookedTimeStamp: -1
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            userId: 0,
+            doctorId: 0,
+            scheduleId: 0,
+            startTime: 0,
+            endTime: 0,
+            latLng: 0,
+            startTimeStamp: 0,
+            endTimeStamp: 0,
+            bookedTimeStamp: 0,
+            status: 0,
+            token: 0,
+            scheduleDetails: 0,
+            "userDetails._id": 0,
+            "userDetails.password": 0,
+            "userDetails.userType": 0,
+            "userDetails.status": 0,
+            "userDetails.userId": 0,
+            "userDetails.dateOfBirth": 0,
+            "userDetails.gender": 0,
+            "userDetails.deviceToken": 0,
+            "userDetails.favorites": 0,
+            "hospitalDetails._id": 0,
+            "hospitalDetails.landmark": 0
+          }
+        }
+      ],
+      (err, bookings) => {
+        if (err) {
+          callback(null);
+        } else {
+          callback(bookings);
         }
       }
     );

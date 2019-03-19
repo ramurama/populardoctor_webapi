@@ -24,4 +24,14 @@ module.exports = app => {
       });
     }
   );
+
+  app.get(
+    routes.GET_BOOKING_HISTORY_DR,
+    passport.authenticate("jwt"),
+    (req, res) => {
+      doctorService.getBookingHistory(req.user._id, bookings => {
+        res.send(bookings);
+      });
+    }
+  );
 };

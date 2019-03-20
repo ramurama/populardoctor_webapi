@@ -101,11 +101,17 @@ module.exports = {
    */
   async getBookingHistory(userId, callback) {
     const doctorId = await _getDoctorIdByUserId(userId);
+    const today = utils.getDateString(new Date());
+    const sixMonthsPast = new Date(today).setMonth(new Date().getMonth() - 6);
+
     Booking.aggregate(
       [
         {
           $match: {
-            doctorId: mongoose.Types.ObjectId(doctorId)
+            doctorId: mongoose.Types.ObjectId(doctorId),
+            tokenDate: {
+              $gte: new Date(sixMonthsPast)
+            }
           }
         },
         {

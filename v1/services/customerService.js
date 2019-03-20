@@ -489,19 +489,25 @@ module.exports = {
    * @param {Function} callback
    */
   getBookingHistory(userId, callback) {
+    const today = utils.getDateString(new Date());
+    const sixMonthsPast = new Date(today).setMonth(new Date().getMonth() - 6);
+
     Booking.aggregate(
       [
+        {
+          $match: {
+            userId,
+            tokenDate: {
+              $gte: new Date(sixMonthsPast)
+            }
+          }
+        },
         {
           $lookup: {
             from: "doctors",
             localField: "doctorId",
             foreignField: "_id",
             as: "doctorDetailsTemp"
-          }
-        },
-        {
-          $match: {
-            userId
           }
         },
         {

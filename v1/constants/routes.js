@@ -48,5 +48,6 @@ module.exports = {
   //doctor
   GET_NEXT_DAY_SCHEDULE_CONFIRMATIONS: "/api/v1/doctor/getNextDayConfirmations",
   CONFIRM_SCHEDULE: "/api/v1/doctor/confirmSchedule",
-  GET_BOOKING_HISTORY_DR: "/api/v1/doctor/getBookingHistory"
+  GET_BOOKING_HISTORY_DR: "/api/v1/doctor/getBookingHistory",
+  GET_TODAYS_BOOKINGS: "/api/v1/doctor/getTodaysBookings"
 };

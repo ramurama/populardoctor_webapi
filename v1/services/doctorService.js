@@ -183,6 +183,88 @@ module.exports = {
         }
       }
     );
+  },
+
+  async getTodaysBookings(userId, callback) {
+    const doctorId = await _getDoctorIdByUserId(userId);
+    let today = utils.getDateString(new Date());
+
+    Booking.aggregate(
+      [
+        {
+          $match: {
+            tokenDate: new Date(today),
+            doctorId: mongoose.Types.ObjectId(doctorId),
+            status: tokenBookingStatus.BOOKED
+          }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "userDetails"
+          }
+        },
+        {
+          $unwind: "$userDetails"
+        },
+        {
+          $lookup: {
+            from: "schedules",
+            localField: "scheduleId",
+            foreignField: "_id",
+            as: "scheduleDetails"
+          }
+        },
+        {
+          $unwind: "$scheduleDetails"
+        },
+        {
+          $lookup: {
+            from: "hospitals",
+            localField: "scheduleDetails.hospitalId",
+            foreignField: "_id",
+            as: "hospitalDetails"
+          }
+        },
+        {
+          $unwind: "$hospitalDetails"
+        },
+        {
+          $project: {
+            _id: 0,
+            userId: 0,
+            doctorId: 0,
+            scheduleId: 0,
+            latLng: 0,
+            startTimeStamp: 0,
+            endTimeStamp: 0,
+            bookedTimeStamp: 0,
+            status: 0,
+            scheduleDetails: 0,
+            "userDetails._id": 0,
+            "userDetails.password": 0,
+            "userDetails.userType": 0,
+            "userDetails.status": 0,
+            "userDetails.userId": 0,
+            "userDetails.dateOfBirth": 0,
+            "userDetails.gender": 0,
+            "userDetails.deviceToken": 0,
+            "userDetails.favorites": 0,
+            "hospitalDetails._id": 0,
+            "hospitalDetails.landmark": 0
+          }
+        }
+      ],
+      (err, bookings) => {
+        if (err) {
+          callback([]);
+        } else {
+          callback(bookings);
+        }
+      }
+    );
   }
 };
 

@@ -449,7 +449,9 @@ module.exports = {
       const selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
       delete selectedToken.status;
       const bookingId = await _getAutoNumber();
-      const bookedTimeStamp = new Date();
+      const bookedTimeStamp = moment(new Date())
+        .tz("Asia/Calcutta")
+        .format();
       Booking.collection
         .insertOne({
           bookingId,
@@ -741,7 +743,6 @@ function _get24HrFormatTime(time) {
 }
 
 function _getDateTime(date, time) {
-  // process.env.TZ = "Asia/Calcutta|Asia/Kolkata";
   const timeArr = _get24HrFormatTime(time).split(":");
   date = new Date(date);
   date.setHours(timeArr[0]);

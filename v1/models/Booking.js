@@ -28,8 +28,7 @@ const bookingSchema = new Schema({
     required: true
   },
   bookedTimeStamp: {
-    type: Date,
-    default: Date.now
+    type: "string"
   },
   latLng: {
     type: Array,
@@ -51,6 +50,9 @@ const bookingSchema = new Schema({
       tokenBookingStatus.CANCELLED
     ],
     default: tokenBookingStatus.BOOKED
+  },
+  visitedTimeStamp: {
+    type: "string"
   }
 });
 

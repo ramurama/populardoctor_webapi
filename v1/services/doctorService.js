@@ -191,6 +191,13 @@ module.exports = {
     );
   },
 
+  /**
+   * getTodaysBookings method gets the list of bookings for the current day,
+   * given a doctor's userId
+   *
+   * @param {String} userId
+   * @param {Function} callback
+   */
   async getTodaysBookings(userId, callback) {
     const doctorId = await _getDoctorIdByUserId(userId);
     let today = utils.getDateString(new Date());
@@ -271,6 +278,44 @@ module.exports = {
         }
       }
     );
+  },
+
+  /**
+   * confirmVisit method updates the status of the booking to VISITED from BLOCKED.
+   * It also addes visitedTime to the document.
+   *
+   * @param {String} userId
+   * @param {String} bookingId
+   * @param {Function} callback
+   */
+  async confirmVisit(userId, bookingId, callback) {
+    const doctorId = await _getDoctorIdByUserId(userId);
+
+    //bookingId is of type number in DB
+    bookingId = parseInt(bookingId);
+    const visitedTimeStamp = moment(new Date())
+      .tz("Asia/Calcutta")
+      .format();
+    Booking.findOne({ bookingId }, (err, booking) => {
+      if (
+        !utils.isNullOrEmpty(booking) &&
+        utils.isStringsEqual(doctorId, booking.doctorId)
+      ) {
+        Booking.updateOne(
+          { bookingId },
+          { $set: { status: tokenBookingStatus.VISITED, visitedTimeStamp } },
+          (err, raw) => {
+            if (err) {
+              callback(false, "Unknown error!");
+            } else {
+              callback(true, "Visit confirmed successfully");
+            }
+          }
+        );
+      } else {
+        callback(false, "Appointment has been made for a different doctor.");
+      }
+    });
   }
 };
 

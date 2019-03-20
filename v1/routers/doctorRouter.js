@@ -44,4 +44,16 @@ module.exports = app => {
       });
     }
   );
+
+  app.put(
+    routes.CONFIRM_VISITING + "/:bookingId",
+    passport.authenticate("jwt"),
+    (req, res) => {
+      const userId = req.user._id;
+      const { bookingId } = req.params;
+      doctorService.confirmVisit(userId, bookingId, status => {
+        res.send({ status });
+      });
+    }
+  );
 };

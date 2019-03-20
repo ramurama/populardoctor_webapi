@@ -723,11 +723,6 @@ function _computeAvailabilityStatus(tokenTableDoc) {
     utils.isStringsEqual(token.status, tokenBookingStatus.OPEN)
   );
 
-  console.log(nowMoment);
-  console.log(startTimeMoment);
-  console.log(endTimeMoment);
-  console.log(bookingTimeStartMoment);
-
   return isBookingTimeAllowed && isTokensOpen;
 }
 

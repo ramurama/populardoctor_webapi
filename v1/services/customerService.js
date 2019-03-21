@@ -450,14 +450,6 @@ module.exports = {
       const selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
       delete selectedToken.status;
 
-      // const lock = new AsyncLock();
-      // lock.acquire("autoNumber", (done ) => {
-      //   console.log("Auto numbering lock acquired.")
-      //   done();
-      // }, (err, ret) => {
-      //   console.log("Auto numbering lock released.")
-      // })
-
       const bookingId = await _getAutoNumber();
       const bookedTimeStamp = moment(new Date())
         .tz("Asia/Calcutta")
@@ -875,32 +867,43 @@ function _updateFavorites(mobile, userId, operation) {
 /**
  * _getAutoNumber method fetches the number from collection.
  * It then increments the number by one and is saved to the same document in the collection.
+ * Async-lock has been added inorder to prevent duplication of booking IDs
+ * in the case of concurrency.
  */
 function _getAutoNumber() {
   return new Promise((resolve, reject) => {
-    AutoNumber.find({}, (err, numbers) => {
-      if (err) {
-        reject(err);
-      } else {
-        const { number } = numbers[0];
-        const nextNumber = number + 1;
-        AutoNumber.updateOne(
-          { number },
-          {
-            $set: {
-              number: nextNumber
-            }
-          },
-          (err, raw) => {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(number);
-            }
+    const lock = new AsyncLock();
+    lock
+      .acquire("autoNumber", () => {
+        console.log("auto number lock acquired");
+        AutoNumber.find({}, (err, numbers) => {
+          if (err) {
+            reject(err);
+          } else {
+            const { number } = numbers[0];
+            const nextNumber = number + 1;
+            AutoNumber.updateOne(
+              { number },
+              {
+                $set: {
+                  number: nextNumber
+                }
+              },
+              (err, raw) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve(number);
+                }
+              }
+            );
           }
-        );
-      }
-    });
+        });
+      })
+      .then(() => {
+        console.log("auto number lock released");
+        // lock released
+      });
   });
 }
 

@@ -149,7 +149,7 @@ module.exports = {
         },
         {
           $sort: {
-            bookedTimeStamp: -1
+            bookingId: -1
           }
         },
         {
@@ -165,7 +165,6 @@ module.exports = {
             endTimeStamp: 0,
             bookedTimeStamp: 0,
             status: 0,
-            token: 0,
             scheduleDetails: 0,
             "userDetails._id": 0,
             "userDetails.password": 0,
@@ -281,6 +280,99 @@ module.exports = {
   },
 
   /**
+   * getBookingDetail method fetched the details of the booking.
+   * If the booking belogs to a different doctor then error message will be sent to the user.
+   *
+   * @param {String} userId
+   * @param {String} bookingId
+   * @param {Function} callback
+   */
+  async getBookingDetail(userId, bookingId, callback) {
+    const doctorId = await _getDoctorIdByUserId(userId);
+    //bookingId is of type number in DB
+    bookingId = parseInt(bookingId);
+    Booking.aggregate(
+      [
+        {
+          $match: {
+            bookingId,
+            doctorId
+          }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "userDetails"
+          }
+        },
+        {
+          $unwind: "$userDetails"
+        },
+        {
+          $lookup: {
+            from: "schedules",
+            localField: "scheduleId",
+            foreignField: "_id",
+            as: "scheduleDetails"
+          }
+        },
+        {
+          $unwind: "$scheduleDetails"
+        },
+        {
+          $lookup: {
+            from: "hospitals",
+            localField: "scheduleDetails.hospitalId",
+            foreignField: "_id",
+            as: "hospitalDetails"
+          }
+        },
+        {
+          $unwind: "$hospitalDetails"
+        },
+        {
+          $project: {
+            _id: 0,
+            userId: 0,
+            doctorId: 0,
+            scheduleId: 0,
+            latLng: 0,
+            startTimeStamp: 0,
+            endTimeStamp: 0,
+            bookedTimeStamp: 0,
+            status: 0,
+            scheduleDetails: 0,
+            "userDetails._id": 0,
+            "userDetails.password": 0,
+            "userDetails.userType": 0,
+            "userDetails.status": 0,
+            "userDetails.userId": 0,
+            "userDetails.dateOfBirth": 0,
+            "userDetails.gender": 0,
+            "userDetails.deviceToken": 0,
+            "userDetails.favorites": 0,
+            "hospitalDetails._id": 0,
+            "hospitalDetails.landmark": 0
+          }
+        }
+      ],
+      (err, booking) => {
+        if (utils.isNullOrEmpty(booking)) {
+          callback(
+            false,
+            "Appointment has been made for a different doctor.",
+            null
+          );
+        } else {
+          callback(true, null, booking[0]);
+        }
+      }
+    );
+  },
+
+  /**
    * confirmVisit method updates the status of the booking to VISITED from BLOCKED.
    * It also addes visitedTime to the document.
    *
@@ -288,34 +380,23 @@ module.exports = {
    * @param {String} bookingId
    * @param {Function} callback
    */
-  async confirmVisit(userId, bookingId, callback) {
-    const doctorId = await _getDoctorIdByUserId(userId);
-
+  confirmVisit(userId, bookingId, callback) {
     //bookingId is of type number in DB
     bookingId = parseInt(bookingId);
     const visitedTimeStamp = moment(new Date())
       .tz("Asia/Calcutta")
       .format();
-    Booking.findOne({ bookingId }, (err, booking) => {
-      if (
-        !utils.isNullOrEmpty(booking) &&
-        utils.isStringsEqual(doctorId, booking.doctorId)
-      ) {
-        Booking.updateOne(
-          { bookingId },
-          { $set: { status: tokenBookingStatus.VISITED, visitedTimeStamp } },
-          (err, raw) => {
-            if (err) {
-              callback(false, "Unknown error!");
-            } else {
-              callback(true, "Visit confirmed successfully");
-            }
-          }
-        );
-      } else {
-        callback(false, "Appointment has been made for a different doctor.");
+    Booking.updateOne(
+      { bookingId },
+      { $set: { status: tokenBookingStatus.VISITED, visitedTimeStamp } },
+      (err, raw) => {
+        if (err) {
+          callback(false, "Unknown error!");
+        } else {
+          callback(true, "Visit confirmed successfully");
+        }
       }
-    });
+    );
   }
 };
 

@@ -45,6 +45,22 @@ module.exports = app => {
     }
   );
 
+  app.get(
+    routes.GET_QR_BOOKING_DETAIL + "/:bookingId",
+    passport.authenticate("jwt"),
+    (req, res) => {
+      const userId = req.user._id;
+      const { bookingId } = req.params;
+      doctorService.getBookingDetail(
+        userId,
+        bookingId,
+        (status, message, bookingDetail) => {
+          res.send({ status, message, bookingDetail });
+        }
+      );
+    }
+  );
+
   app.put(
     routes.CONFIRM_VISITING + "/:bookingId",
     passport.authenticate("jwt"),

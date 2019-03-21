@@ -50,5 +50,6 @@ module.exports = {
   CONFIRM_SCHEDULE: "/api/v1/doctor/confirmSchedule",
   GET_BOOKING_HISTORY_DR: "/api/v1/doctor/getBookingHistory",
   GET_TODAYS_BOOKINGS: "/api/v1/doctor/getTodaysBookings",
+  GET_QR_BOOKING_DETAIL: "/api/v1/doctor/getBookingDetail",
   CONFIRM_VISITING: "/api/v1/doctor/confirmVisit"
 };

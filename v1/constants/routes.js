@@ -11,6 +11,7 @@ module.exports = {
   SIGNUP_CUSTOMER: "/api/v1/customer/signup",
   USER_VERIFY_OTP: "/api/v1/user/verifyOtp",
   IS_MOBILE_NUMBER_EXISTS: "/api/v1/user/isMobileNumberExists",
+  GET_SUPPORT_DETAILS: "/api/v1/user/getSupportDetails",
 
   SEND_OTP: "/api/v1/messages/sendOtp",
   SEND_PUSH: "/api/v1/messages/push/",
@@ -34,7 +35,7 @@ module.exports = {
   GET_BOOKING_HISTORY_DETAIL_ADMIN: "/api/v1/admin/getBookingHistoryDetail",
 
   //customer
-  GET_SEARCH_CRITERIA: "/api/v1/customer/getSearchCriteria",
+  GET_INITIAL_DATA: "/api/v1/customer/getInitialData",
   ADD_FAVORITE: "/api/v1/customer/addFavorite",
   REMOVE_FAVORITE: "/api/v1/customer/removeFavorite",
   GET_FAVORITES: "/api/v1/customer/getFavorites",

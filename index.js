@@ -17,6 +17,7 @@ require("./v1/models/Schedule");
 require("./v1/models/TokenTable");
 require("./v1/models/Booking");
 require("./v1/models/AutoNumber");
+require("./v1/models/UserSupport");
 
 //v1 services
 require("./v1/services/passport");

@@ -65,4 +65,13 @@ module.exports = app => {
       res.send({ status });
     });
   });
+
+  app.get(routes.GET_SUPPORT_DETAILS, async (req, res) => {
+    try {
+      const support = await settingsService.getSupportDetails();
+      res.send(support);
+    } catch (err) {
+      res.send({});
+    }
+  });
 };

@@ -54,43 +54,23 @@ module.exports = {
 
     const tokenDate = tomorrowMoment.format("YYYY-MM-DD").toString();
     const weekday = tomorrowMoment.format("ddd").toString();
-    Schedule.aggregate(
-      [
-        {
-          $lookup: {
-            from: "hospitals",
-            localField: "hospitalId",
-            foreignField: "_id",
-            as: "hospitalDetails"
-          }
-        },
-        {
-          $match: {
-            doctorId: mongoose.Types.ObjectId(doctorId),
-            weekday
-          }
-        },
-        {
-          $unwind: "$hospitalDetails"
-        },
-        {
-          $project: {
-            tokens: 0
-          }
+
+    const schedules = await _getSchedulesForWeekday(doctorId, weekday);
+    const tokenTables = await _getTokenTablesForWeekday(doctorId, tokenDate);
+
+    let nextDayScheduleConfirmations = schedules
+      .map(schedule => {
+        const tokenTable = tokenTables.find(tokenTable => {
+          return utils.isEqual(schedule._id, tokenTable.scheduleId);
+        });
+        if (utils.isNullOrEmpty(tokenTable)) {
+          return schedule;
         }
-      ],
-      async (err, schedules) => {
-        if (err) {
-          callback([], tokenDate);
-        } else {
-          // const computedSchedules = await _computeScheduleConfirmations(
-          //   schedules,
-          //   tokenDate
-          // );
-          callback({ schedules, tokenDate });
-        }
-      }
-    );
+      })
+      .filter(schedule => {
+        return !utils.isNullOrEmpty(schedule);
+      });
+    callback(nextDayScheduleConfirmations);
   },
 
   /**
@@ -509,59 +489,68 @@ function _getSchedulesForTheDay(today, doctorId) {
 }
 
 /**
- * _isTokenTableDocExists method checks if any tokenTableDoc available for the given params.
- * If available returns true, returns false otherwise
+ * _getSchedulesForWeekday method fetches the list of schedules for the given doctorId and weekday.
  *
  * @param {String} doctorId
- * @param {String} scheduleId
- * @param {String} tokenDate
+ * @param {String} weekday
  */
-// function _isTokenTableDocExists(doctorId, scheduleId, tokenDate) {
-//   return new Promise((resolve, reject) => {
-//     TokenTable.findOne(
-//       {
-//         doctorId: mongoose.Types.ObjectId(doctorId),
-//         scheduleId: mongoose.Types.ObjectId(scheduleId),
-//         tokenDate: new Date(tokenDate)
-//       },
-//       (err, tokenTableDoc) => {
-//         if (err) {
-//           reject(err);
-//         } else {
-//           if (utils.isNullOrEmpty(tokenTableDoc)) {
-//             resolve(false);
-//           } else {
-//             resolve(true);
-//           }
-//         }
-//       }
-//     );
-//   });
-// }
+function _getSchedulesForWeekday(doctorId, weekday) {
+  return new Promise((resolve, reject) => {
+    Schedule.aggregate(
+      [
+        {
+          $match: {
+            doctorId: mongoose.Types.ObjectId(doctorId),
+            weekday,
+            isDeleted: false
+          }
+        },
+        {
+          $lookup: {
+            from: "hospitals",
+            localField: "hospitalId",
+            foreignField: "_id",
+            as: "hospitalDetails"
+          }
+        },
+        {
+          $unwind: "$hospitalDetails"
+        },
+        {
+          $project: {
+            tokens: 0
+          }
+        }
+      ],
+      (err, schedules) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(schedules);
+        }
+      }
+    );
+  });
+}
 
-// function _computeScheduleConfirmations(schedules, tokenDate) {
-//   return new Promise((resolve, reject) => {
-//     let computedSchedules = [];
-//     schedules.forEach(schedule => {
-//       const { doctorId, _id } = schedule;
-//       TokenTable.findOne(
-//         {
-//           doctorId: mongoose.Types.ObjectId(doctorId),
-//           scheduleId: mongoose.Types.ObjectId(_id),
-//           tokenDate: new Date(tokenDate)
-//         },
-//         (err, tokenTableDoc) => {
-//           if (err) {
-//             reject(err);
-//           } else {
-//             if (!utils.isNullOrEmpty(tokenTableDoc)) {
-//               computedSchedules.push(schedule);
-//             }
-//           }
-//         }
-//       );
-//       console.log(computedSchedules);
-//     });
-//     resolve(computedSchedules);
-//   });
-// }
+/**
+ * _getTokenTablesForWeekday method fetches the list of token table docs for the given doctorId and date.
+ *
+ * @param {String} doctorId
+ * @param {String} weekday
+ */
+function _getTokenTablesForWeekday(doctorId, tokenDate) {
+  return new Promise((resolve, reject) => {
+    TokenTable.find(
+      { doctorId, tokenDate: new Date(tokenDate) },
+      { tokens: 0 },
+      (err, tokenTableDocs) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(tokenTableDocs);
+        }
+      }
+    );
+  });
+}

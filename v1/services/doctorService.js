@@ -102,7 +102,7 @@ module.exports = {
   async getBookingHistory(userId, callback) {
     const doctorId = await _getDoctorIdByUserId(userId);
     const today = utils.getDateString(new Date());
-    const sixMonthsPast = new Date(today).setMonth(new Date().getMonth() - 6);
+    const threeMonthsPast = new Date(today).setMonth(new Date().getMonth() - 3);
 
     Booking.aggregate(
       [
@@ -110,7 +110,7 @@ module.exports = {
           $match: {
             doctorId: mongoose.Types.ObjectId(doctorId),
             tokenDate: {
-              $gte: new Date(sixMonthsPast)
+              $gte: new Date(threeMonthsPast)
             }
           }
         },
@@ -198,85 +198,43 @@ module.exports = {
    * @param {Function} callback
    */
   async getTodaysBookings(userId, callback) {
+    const today = utils.getDateString(new Date());
     const doctorId = await _getDoctorIdByUserId(userId);
-    let today = utils.getDateString(new Date());
+    const bookings = await _getBookingsForTheDay(today, doctorId);
+    const schedules = await _getSchedulesForTheDay(today, doctorId);
 
-    Booking.aggregate(
-      [
-        {
-          $match: {
-            tokenDate: new Date(today),
-            doctorId: mongoose.Types.ObjectId(doctorId),
-            status: tokenBookingStatus.BOOKED
+    let todaysBookings = [];
+    schedules.forEach(schedule => {
+      const visitorsList = bookings
+        .map(booking => {
+          if (utils.isEqual(schedule._id, booking.scheduleId)) {
+            const { userDetails, token, bookingId } = booking;
+            return {
+              bookingId,
+              name: userDetails.fullName,
+              number: userDetails.username,
+              tokenNumber: token.number,
+              tokenType: token.type,
+              tokenTime: token.time
+            };
           }
-        },
-        {
-          $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            as: "userDetails"
+        })
+        .filter(booking => {
+          if (!utils.isNullOrEmpty(booking)) {
+            return booking;
           }
-        },
-        {
-          $unwind: "$userDetails"
-        },
-        {
-          $lookup: {
-            from: "schedules",
-            localField: "scheduleId",
-            foreignField: "_id",
-            as: "scheduleDetails"
-          }
-        },
-        {
-          $unwind: "$scheduleDetails"
-        },
-        {
-          $lookup: {
-            from: "hospitals",
-            localField: "scheduleDetails.hospitalId",
-            foreignField: "_id",
-            as: "hospitalDetails"
-          }
-        },
-        {
-          $unwind: "$hospitalDetails"
-        },
-        {
-          $project: {
-            _id: 0,
-            userId: 0,
-            doctorId: 0,
-            scheduleId: 0,
-            latLng: 0,
-            startTimeStamp: 0,
-            endTimeStamp: 0,
-            bookedTimeStamp: 0,
-            status: 0,
-            scheduleDetails: 0,
-            "userDetails._id": 0,
-            "userDetails.password": 0,
-            "userDetails.userType": 0,
-            "userDetails.status": 0,
-            "userDetails.userId": 0,
-            "userDetails.dateOfBirth": 0,
-            "userDetails.gender": 0,
-            "userDetails.deviceToken": 0,
-            "userDetails.favorites": 0,
-            "hospitalDetails._id": 0,
-            "hospitalDetails.landmark": 0
-          }
-        }
-      ],
-      (err, bookings) => {
-        if (err) {
-          callback([]);
-        } else {
-          callback(bookings);
-        }
-      }
-    );
+        });
+      const { hospitalDetails, startTime, endTime } = schedule;
+      const obj = {
+        hospitalName: hospitalDetails.name,
+        hospitalTime: startTime + " to " + endTime,
+        appointmentDate: today,
+        visitorsList
+      };
+      todaysBookings.push(obj);
+    });
+
+    callback(todaysBookings);
   },
 
   /**
@@ -437,6 +395,117 @@ function _getSchedule(doctorId, scheduleId) {
 
 function _getMoment(time) {
   return momentTz.tz(time, "Asia/Calcutta");
+}
+
+/**
+ * _getBookingsForTheDay method fetches all the bookings for the given day and doctorId
+ *
+ * @param {String} today
+ * @param {String} doctorId
+ */
+function _getBookingsForTheDay(today, doctorId) {
+  return new Promise((resolve, reject) => {
+    Booking.aggregate(
+      [
+        {
+          $match: {
+            tokenDate: new Date(today),
+            doctorId: mongoose.Types.ObjectId(doctorId),
+            status: tokenBookingStatus.BOOKED
+          }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "userDetails"
+          }
+        },
+        {
+          $unwind: "$userDetails"
+        },
+        {
+          $project: {
+            _id: 0,
+            userId: 0,
+            doctorId: 0,
+            latLng: 0,
+            startTime: 0,
+            endTime: 0,
+            startTimeStamp: 0,
+            endTimeStamp: 0,
+            bookedTimeStamp: 0,
+            status: 0,
+            "userDetails._id": 0,
+            "userDetails.password": 0,
+            "userDetails.userType": 0,
+            "userDetails.status": 0,
+            "userDetails.userId": 0,
+            "userDetails.dateOfBirth": 0,
+            "userDetails.gender": 0,
+            "userDetails.deviceToken": 0,
+            "userDetails.favorites": 0
+          }
+        }
+      ],
+      (err, bookings) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(bookings);
+        }
+      }
+    );
+  });
+}
+
+/**
+ * _getSchedulesForTheDay method fetches the schedules for the given day and doctorId.
+ *
+ * @param {String} today
+ * @param {String} doctorId
+ */
+function _getSchedulesForTheDay(today, doctorId) {
+  return new Promise((resolve, reject) => {
+    today = new Date(today);
+    const todayMoment = moment(today);
+    const weekday = todayMoment.format("ddd");
+    Schedule.aggregate(
+      [
+        {
+          $match: {
+            doctorId: mongoose.Types.ObjectId(doctorId),
+            weekday
+          }
+        },
+        {
+          $lookup: {
+            from: "hospitals",
+            localField: "hospitalId",
+            foreignField: "_id",
+            as: "hospitalDetails"
+          }
+        },
+        {
+          $unwind: "$hospitalDetails"
+        },
+        {
+          $project: {
+            tokens: 0,
+            isDeleted: 0
+          }
+        }
+      ],
+      (err, schedules) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(schedules);
+        }
+      }
+    );
+  });
 }
 
 /**

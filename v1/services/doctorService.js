@@ -94,9 +94,9 @@ module.exports = {
           $match: {
             doctorId: mongoose.Types.ObjectId(doctorId),
             tokenDate: {
-              $gte: new Date(threeMonthsPast),
-              $lte: new Date(yesterday)
-            }
+              $gte: new Date(threeMonthsPast)
+            },
+            status: tokenBookingStatus.VISITED
           }
         },
         {

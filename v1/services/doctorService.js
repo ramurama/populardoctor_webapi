@@ -4,6 +4,7 @@ const Doctor = mongoose.model(modelNames.DOCTOR);
 const TokenTable = mongoose.model(modelNames.TOKEN_TABLE);
 const Schedule = mongoose.model(modelNames.SCHEDULE);
 const Booking = mongoose.model(modelNames.BOOKING);
+const BookingOtp = mongoose.model(modelNames.BOOKING_OTP);
 const tokenBookingStatus = require("../constants/tokenBookingStatus");
 const utils = require("../utils");
 const moment = require("moment");
@@ -332,23 +333,61 @@ module.exports = {
    * @param {String} bookingId
    * @param {Function} callback
    */
-  confirmVisit(userId, bookingId, callback) {
+  async confirmVisit(bookingId, callback) {
     //bookingId is of type number in DB
     bookingId = parseInt(bookingId);
-    const visitedTimeStamp = moment(new Date())
-      .tz("Asia/Calcutta")
-      .format();
-    Booking.updateOne(
-      { bookingId },
-      { $set: { status: tokenBookingStatus.VISITED, visitedTimeStamp } },
-      (err, raw) => {
+    const status = await _confirmVisit(bookingId);
+    if (status) {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  },
+
+  /**
+   * verifyBookingOtp method is used to verify booking OTP.
+   *
+   * @param {String} bookingId
+   * @param {String} otp
+   */
+  verifyBookingOtp(bookingId, otp) {
+    bookingId = parseInt(bookingId);
+    return new Promise((resolve, reject) => {
+      BookingOtp.findOne({ bookingId }, async (err, booking) => {
         if (err) {
-          callback(false, "Unknown error!");
+          reject(false);
         } else {
-          callback(true, "Visit confirmed successfully");
+          if (utils.isEqual(parseInt(otp), booking.otp)) {
+            const bookingUpdateStatus = await _confirmVisit(bookingId);
+            if (bookingUpdateStatus) {
+              resolve({ status: true, message: null });
+            } else {
+              resolve({ status: false, message: "Unknown error!" });
+            }
+          } else {
+            resolve({ status: false, message: "Incorrect OTP entered." });
+          }
         }
-      }
-    );
+      });
+    });
+  },
+
+  /**
+   * getBookingStatus method returns the status of the booking.
+   *
+   * @param {String} bookingId
+   */
+  getBookingStatus(bookingId) {
+    bookingId = parseInt(bookingId);
+    return new Promise((resolve, reject) => {
+      Booking.findOne({ bookingId }, (err, booking) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(booking.status);
+        }
+      });
+    });
   }
 };
 
@@ -562,6 +601,30 @@ function _getTokenTablesForWeekday(doctorId, tokenDate) {
           reject(err);
         } else {
           resolve(tokenTableDocs);
+        }
+      }
+    );
+  });
+}
+
+/**
+ * _confirmVisit method updates the booking status from BOOKED to VISITED.
+ *
+ * @param {Number} bookingId
+ */
+function _confirmVisit(bookingId) {
+  return new Promise((resolve, reject) => {
+    const visitedTimeStamp = moment(new Date())
+      .tz("Asia/Calcutta")
+      .format();
+    Booking.updateOne(
+      { bookingId },
+      { $set: { status: tokenBookingStatus.VISITED, visitedTimeStamp } },
+      (err, raw) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(true);
         }
       }
     );

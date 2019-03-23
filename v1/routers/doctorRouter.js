@@ -67,9 +67,38 @@ module.exports = app => {
     (req, res) => {
       const userId = req.user._id;
       const { bookingId } = req.params;
-      doctorService.confirmVisit(userId, bookingId, status => {
+      doctorService.confirmVisit(bookingId, status => {
         res.send({ status });
       });
+    }
+  );
+
+  app.post(
+    routes.VERIFY_BOOKING_OTP,
+    passport.authenticate("jwt"),
+    async (req, res) => {
+      const { otp, bookingId } = req.body;
+      try {
+        const data = await doctorService.verifyBookingOtp(bookingId, otp);
+        res.send(data);
+      } catch (err) {
+        res.send({ status: false, message: "Unknown error!" });
+      }
+    }
+  );
+
+  app.get(
+    routes.GET_BOOKING_STATUS + "/:bookingId",
+    passport.authenticate("jwt"),
+    async (req, res) => {
+      try {
+        const bookingStatus = await doctorService.getBookingStatus(
+          req.params.bookingId
+        );
+        res.send({ status: bookingStatus });
+      } catch (err) {
+        res.send({ status: null });
+      }
     }
   );
 };

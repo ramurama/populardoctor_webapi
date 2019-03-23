@@ -54,5 +54,7 @@ module.exports = {
   GET_BOOKING_HISTORY_DR: "/api/v1/doctor/getBookingHistory",
   GET_TODAYS_BOOKINGS: "/api/v1/doctor/getTodaysBookings",
   GET_QR_BOOKING_DETAIL: "/api/v1/doctor/getBookingDetail",
-  CONFIRM_VISITING: "/api/v1/doctor/confirmVisit"
+  CONFIRM_VISITING: "/api/v1/doctor/confirmVisit",
+  VERIFY_BOOKING_OTP: "/api/v1/doctor/verifyBookingOtp",
+  GET_BOOKING_STATUS: "/api/v1/doctor/getBookingStatus"
 };

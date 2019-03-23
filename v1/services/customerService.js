@@ -499,9 +499,6 @@ module.exports = {
   getBookingHistory(userId, callback) {
     const today = utils.getDateString(new Date());
     const sixMonthsPast = new Date(today).setMonth(new Date().getMonth() - 6);
-    console.log(userId);
-    console.log(today);
-    console.log(new Date(sixMonthsPast));
 
     Booking.aggregate(
       [

@@ -624,9 +624,22 @@ function _confirmVisit(bookingId) {
         if (err) {
           reject(err);
         } else {
+          //delete booking otp
+          _deleteBookingOtp(bookingId);
           resolve(true);
         }
       }
     );
   });
+}
+
+/**
+ * _deleteBookingOtp method deletes the document with given bookingId
+ *
+ * @param {Number} bookingId
+ */
+function _deleteBookingOtp(bookingId) {
+  BookingOtp.deleteOne({ bookingId })
+    .then(res => console.log("Bookint OTP deleted for bookingId: " + bookingId))
+    .catch(err => console.log("Error deleting bookingId." + err));
 }

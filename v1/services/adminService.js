@@ -171,6 +171,21 @@ module.exports = {
   },
 
   /**
+   * getSpecializations method fetches all the list of specializations
+   *
+   * @param {Function} callback
+   */
+  getSpecializations(callback) {
+    Specialization.find({}, { _id: 0, iconName: 0 }, (err, specializations) => {
+      if (err) {
+        callback([]);
+      } else {
+        callback(specializations);
+      }
+    });
+  },
+
+  /**
    * getDoctors method gets a list of doctors given a pageNo and size
    *
    * @param {Object} pagination

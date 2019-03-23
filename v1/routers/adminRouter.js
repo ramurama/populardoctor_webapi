@@ -103,4 +103,10 @@ module.exports = app => {
       });
     }
   );
+
+  app.get(routes.GET_SPECIALIZATIONS, (req, res) => {
+    adminService.getSpecializations(specializations =>
+      res.send(specializations)
+    );
+  });
 };

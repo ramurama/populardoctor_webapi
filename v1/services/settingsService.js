@@ -156,5 +156,32 @@ module.exports = {
         }
       });
     });
+  },
+
+  /**
+   * resetPassword method is used to reset the forgotten password
+   *
+   * @param {String} mobile
+   * @param {String} password
+   * @param {Function} callback
+   */
+  resetPassword(mobile, password, callback) {
+    User.findOne({ username: mobile }, (err, user) => {
+      if (!utils.isNullOrEmpty(user)) {
+        User.updateOne(
+          { username: mobile },
+          { $set: { password: user.hashPassword(password) } },
+          (err, raw) => {
+            if (err) {
+              callback(false, "Error updating password. Try Again!");
+            } else {
+              callback(true, "Password has been changed successfully.");
+            }
+          }
+        );
+      } else {
+        callback(false, "User unavailable");
+      }
+    });
   }
 };

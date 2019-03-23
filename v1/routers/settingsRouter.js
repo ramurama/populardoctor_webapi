@@ -74,4 +74,11 @@ module.exports = app => {
       res.send({});
     }
   });
+
+  app.put(routes.RESET_PASSWORD, (req, res) => {
+    const { mobile, password } = req.body;
+    settingsService.resetPassword(mobile, password, (status, message) => {
+      res.send({status, message})
+    })
+  })
 };

@@ -12,6 +12,7 @@ module.exports = {
   USER_VERIFY_OTP: "/api/v1/user/verifyOtp",
   IS_MOBILE_NUMBER_EXISTS: "/api/v1/user/isMobileNumberExists",
   GET_SUPPORT_DETAILS: "/api/v1/user/getSupportDetails",
+  RESET_PASSWORD: "/api/v1/user/resetPassword",
 
   SEND_OTP: "/api/v1/messages/sendOtp",
   SEND_PUSH: "/api/v1/messages/push/",

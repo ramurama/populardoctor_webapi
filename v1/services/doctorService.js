@@ -191,7 +191,12 @@ module.exports = {
     schedules.forEach(schedule => {
       const visitorsList = bookings
         .map(booking => {
-          if (utils.isEqual(schedule._id, booking.scheduleId)) {
+          const nowMoment = _getMoment(new Date());
+          const endTimeMoment = _getMoment(booking.endTimeStamp);
+          if (
+            utils.isEqual(schedule._id, booking.scheduleId) &&
+            !nowMoment.isAfter(endTimeMoment)
+          ) {
             const { userDetails, token, bookingId } = booking;
             return {
               bookingId,
@@ -218,6 +223,11 @@ module.exports = {
       todaysBookings.push(obj);
     });
 
+    todaysBookings = todaysBookings.filter(booking => {
+      if (!utils.isNullOrEmpty(booking.visitorsList)) {
+        return booking;
+      }
+    });
     callback(todaysBookings);
   },
 
@@ -418,7 +428,6 @@ function _getBookingsForTheDay(today, doctorId) {
             startTime: 0,
             endTime: 0,
             startTimeStamp: 0,
-            endTimeStamp: 0,
             bookedTimeStamp: 0,
             status: 0,
             "userDetails._id": 0,

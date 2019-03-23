@@ -322,17 +322,21 @@ module.exports = {
    * @param {Function} callback
    */
   getTokens(doctorId, scheduleId, callback) {
-    TokenTable.findOne({ doctorId, scheduleId }, (err, tokenTable) => {
-      if (err) {
-        callback(false, null);
-      } else {
-        if (utils.isNullOrEmpty(tokenTable)) {
-          callback(false, []);
+    const tokenDate = new Date(utils.getDateString(new Date()));
+    TokenTable.findOne(
+      { doctorId, scheduleId, tokenDate },
+      (err, tokenTable) => {
+        if (err) {
+          callback(false, null);
         } else {
-          callback(true, tokenTable.tokens);
+          if (utils.isNullOrEmpty(tokenTable)) {
+            callback(false, []);
+          } else {
+            callback(true, tokenTable.tokens);
+          }
         }
       }
-    });
+    );
   },
 
   /**
@@ -660,10 +664,7 @@ function _getDoctorIdByUserId(userId) {
  * @param {scheduleId} scheduleId
  */
 function _getAvailabilityStatus(doctorId) {
-  let today = new Date();
-  today.setHours(0);
-  today.setMinutes(0);
-  today.setSeconds(0);
+  let today = new Date(utils.getDateString(new Date()));
 
   return new Promise((resolve, reject) => {
     TokenTable.find(

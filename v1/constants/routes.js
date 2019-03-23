@@ -33,6 +33,7 @@ module.exports = {
   ADD_TOKEN: "/api/v1/admin/addToken",
   GET_BOOKING_HISTORY_ADMIN: "/api/v1/admin/getBookingHistory",
   GET_BOOKING_HISTORY_DETAIL_ADMIN: "/api/v1/admin/getBookingHistoryDetail",
+  GET_SPECIALIZATIONS: "/api/v1/admin/getSpecializations",
 
   //customer
   GET_INITIAL_DATA: "/api/v1/customer/getInitialData",

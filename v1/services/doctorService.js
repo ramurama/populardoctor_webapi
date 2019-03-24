@@ -76,9 +76,9 @@ module.exports = {
         .filter(schedule => {
           return !utils.isNullOrEmpty(schedule);
         });
-      callback(nextDayScheduleConfirmations);
+      callback({ schedules: nextDayScheduleConfirmations, tokenDate });
     } catch (err) {
-      callback([]);
+      callback({ schedules: [], tokenDate });
     }
   },
 

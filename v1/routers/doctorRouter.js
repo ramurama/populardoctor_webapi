@@ -19,8 +19,8 @@ module.exports = app => {
     routes.GET_NEXT_DAY_SCHEDULE_CONFIRMATIONS,
     passport.authenticate("jwt"),
     (req, res) => {
-      doctorService.getNextDayScheduleConfirmations(req.user._id, schedules => {
-        res.send(schedules);
+      doctorService.getNextDayScheduleConfirmations(req.user._id, data => {
+        res.send(data);
       });
     }
   );

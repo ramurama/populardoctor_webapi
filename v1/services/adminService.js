@@ -753,6 +753,87 @@ module.exports = {
         }
       }
     );
+  },
+
+  /**
+   * getMasterDoctors method fetches all the list of doctors
+   *
+   * @param {Function} callback
+   */
+  getMasterDoctors(callback) {
+    Doctor.aggregate(
+      [
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "doctorDetails"
+          }
+        },
+        {
+          $unwind: "$doctorDetails"
+        },
+        {
+          $project: {
+            userId: 0,
+            yearsOfExperience: 0,
+            degree: 0,
+            profileContent: 0,
+            "doctorDetails._id": 0,
+            "doctorDetails.userType": 0,
+            "doctorDetails.status": 0,
+            "doctorDetails.favorites": 0,
+            "doctorDetails.dateOfBirth": 0,
+            "doctorDetails.gender": 0,
+            "doctorDetails.password": 0,
+            "doctorDetails.profileImage": 0
+          }
+        }
+      ],
+      (err, doctors) => {
+        if (err) {
+          callback([]);
+        } else {
+          let masterData = doctors.map(doctor => {
+            const { _id, specialization, doctorDetails } = doctor;
+            return {
+              doctorId: _id,
+              specialization,
+              name: doctorDetails.fullName,
+              mobile: doctorDetails.username
+            };
+          });
+          callback(masterData);
+        }
+      }
+    );
+  },
+
+  /**
+   * getMasterHospitals method fetches all the list of hospitals.
+   *
+   * @param {Function} callback
+   */
+  getMasterHospitals(callback) {
+    Hospital.find({}, (err, hospitals) => {
+      if (err) {
+        callback([]);
+      } else {
+        let masterData = hospitals.map(hospital => {
+          const { _id, name, address, location, pincode, landmark } = hospital;
+          return {
+            hospitalId: _id,
+            name,
+            address,
+            location,
+            pincode,
+            landmark
+          };
+        });
+        callback(masterData);
+      }
+    });
   }
 };
 

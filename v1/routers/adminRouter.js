@@ -109,4 +109,16 @@ module.exports = app => {
       res.send(specializations)
     );
   });
+
+  app.get(routes.GET_MASTER_DOCTORS, (req, res) => {
+    adminService.getMasterDoctors(doctors => {
+      res.send(doctors);
+    });
+  });
+
+  app.get(routes.GET_MASTER_HOSPITALS, (req, res) => {
+    adminService.getMasterHospitals(hospitals => {
+      res.send(hospitals);
+    });
+  });
 };

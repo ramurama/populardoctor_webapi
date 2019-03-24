@@ -12,16 +12,23 @@ module.exports = app => {
       const locations = customerService.getLocations();
       const favorites = customerService.getFavorites(req.user.username);
       const support = settingsService.getSupportDetails();
-      Promise.all([specializations, locations, favorites, support]).then(
-        data => {
+      Promise.all([specializations, locations, favorites, support])
+        .then(data => {
           res.send({
             specializations: data[0],
             locations: data[1],
             favorites: data[2],
             support: data[3]
           });
-        }
-      );
+        })
+        .catch(err => {
+          res.send({
+            specializations: [],
+            locations: [],
+            favorites: [],
+            support: {}
+          });
+        });
     }
   );
 

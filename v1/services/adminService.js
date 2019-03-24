@@ -86,21 +86,25 @@ module.exports = {
     Hospital.collection
       .insertOne(hospital)
       .then(async res => {
-        if (await _isLocationExists(location)) {
-          //location already exists in Location collection
-          callback(true);
-        } else {
-          //location document
-          let locationDoc = new Location();
-          locationDoc.name = location;
-          locationDoc.collection
-            .insertOne(locationDoc)
-            .then(res => callback(true))
-            .catch(err =>
-              console.log(
-                "***** Error inserting document into Location. " + err
-              )
-            );
+        try {
+          if (await _isLocationExists(location)) {
+            //location already exists in Location collection
+            callback(true);
+          } else {
+            //location document
+            let locationDoc = new Location();
+            locationDoc.name = location;
+            locationDoc.collection
+              .insertOne(locationDoc)
+              .then(res => callback(true))
+              .catch(err =>
+                console.log(
+                  "***** Error inserting document into Location. " + err
+                )
+              );
+          }
+        } catch (err) {
+          callback(false);
         }
       })
       .catch(err =>
@@ -115,32 +119,36 @@ module.exports = {
    * @param {Function} callback
    */
   async createSchedule(scheduleData, callback) {
-    if (await _isScheduleExists(scheduleData)) {
-      callback(false, "Schedule already exists.");
-    } else {
-      const {
-        doctorId,
-        hospitalId,
-        weekday,
-        startTime,
-        endTime,
-        tokens
-      } = scheduleData;
-      //schedule document
-      let schedule = new Schedule();
-      schedule.doctorId = doctorId;
-      schedule.hospitalId = hospitalId;
-      schedule.weekday = weekday;
-      schedule.startTime = startTime;
-      schedule.endTime = endTime;
-      schedule.tokens = tokens;
-      schedule.isDeleted = false;
-      Schedule.collection
-        .insertOne(schedule)
-        .then(res => callback(true, "Schedule created successfully."))
-        .catch(err =>
-          console.log("***** Error creating schedule document. " + err)
-        );
+    try {
+      if (await _isScheduleExists(scheduleData)) {
+        callback(false, "Schedule already exists.");
+      } else {
+        const {
+          doctorId,
+          hospitalId,
+          weekday,
+          startTime,
+          endTime,
+          tokens
+        } = scheduleData;
+        //schedule document
+        let schedule = new Schedule();
+        schedule.doctorId = doctorId;
+        schedule.hospitalId = hospitalId;
+        schedule.weekday = weekday;
+        schedule.startTime = startTime;
+        schedule.endTime = endTime;
+        schedule.tokens = tokens;
+        schedule.isDeleted = false;
+        Schedule.collection
+          .insertOne(schedule)
+          .then(res => callback(true, "Schedule created successfully."))
+          .catch(err =>
+            console.log("***** Error creating schedule document. " + err)
+          );
+      }
+    } catch (err) {
+      callback(false, "Unknown error!");
     }
   },
 
@@ -152,21 +160,25 @@ module.exports = {
    * @param {Function} callback
    */
   async createSpecialization(name, iconName, callback) {
-    if (await _isSpecializationExists(name)) {
-      callback(false, "Specialization already exists!");
-    } else {
-      if (utils.isNullOrEmpty(iconName)) {
-        iconName = "general";
+    try {
+      if (await _isSpecializationExists(name)) {
+        callback(false, "Specialization already exists!");
+      } else {
+        if (utils.isNullOrEmpty(iconName)) {
+          iconName = "general";
+        }
+        let specialization = new Specialization();
+        specialization.name = name;
+        specialization.iconName = iconName;
+        Specialization.collection
+          .insertOne(specialization)
+          .then(res => callback(true, "Specialization added successfully."))
+          .catch(err =>
+            console.log("***** Error creating specialization. " + err)
+          );
       }
-      let specialization = new Specialization();
-      specialization.name = name;
-      specialization.iconName = iconName;
-      Specialization.collection
-        .insertOne(specialization)
-        .then(res => callback(true, "Specialization added successfully."))
-        .catch(err =>
-          console.log("***** Error creating specialization. " + err)
-        );
+    } catch (err) {
+      callback(false, "Unknown error!");
     }
   },
 
@@ -233,12 +245,16 @@ module.exports = {
           }
         ],
         async (err, doctors) => {
-          const totalDocuments = await _getUsersCount(userType.DOCTOR);
-          const totalPages = Math.ceil(totalDocuments / limit);
-          if (err) {
+          try {
+            const totalDocuments = await _getUsersCount(userType.DOCTOR);
+            const totalPages = Math.ceil(totalDocuments / limit);
+            if (err) {
+              callback({ status: false, doctors: [], totalPages: null });
+            } else {
+              callback({ status: true, totalPages, doctors });
+            }
+          } catch (err) {
             callback({ status: false, doctors: [], totalPages: null });
-          } else {
-            callback({ status: true, totalPages, doctors });
           }
         }
       );
@@ -272,9 +288,13 @@ module.exports = {
           if (err) {
             callback({ status: false, users: [], totalPages: null });
           } else {
-            const totalDocuments = await _getUsersCount(userType);
-            const totalPages = Math.ceil(totalDocuments / limit);
-            callback({ status: true, totalPages, users });
+            try {
+              const totalDocuments = await _getUsersCount(userType);
+              const totalPages = Math.ceil(totalDocuments / limit);
+              callback({ status: true, totalPages, users });
+            } catch (err) {
+              callback({ status: false, totalPages: 0, users: [] });
+            }
           }
         }
       );
@@ -313,9 +333,13 @@ module.exports = {
           if (err) {
             callback({ status: false, hospitals: [], totalPages: null });
           } else {
-            const totalDocuments = await _getHospitalsCount(location);
-            const totalPages = Math.ceil(totalDocuments / limit);
-            callback({ status: true, totalPages, hospitals });
+            try {
+              const totalDocuments = await _getHospitalsCount(location);
+              const totalPages = Math.ceil(totalDocuments / limit);
+              callback({ status: true, totalPages, hospitals });
+            } catch (err) {
+              callback({ status: true, totalPages: 0, hospitals: [] });
+            }
           }
         }
       );
@@ -329,13 +353,17 @@ module.exports = {
    * @param {Function} callback
    */
   async blockUser(userId, callback) {
-    const updateStatus = await _updateUserStatus(
-      userId,
-      activationStatus.INACTIVE
-    );
-    if (updateStatus) {
-      callback(true);
-    } else {
+    try {
+      const updateStatus = await _updateUserStatus(
+        userId,
+        activationStatus.INACTIVE
+      );
+      if (updateStatus) {
+        callback(true);
+      } else {
+        callback(false);
+      }
+    } catch (err) {
       callback(false);
     }
   },
@@ -347,13 +375,17 @@ module.exports = {
    * @param {String} callback
    */
   async unblockUser(userId, callback) {
-    const updateStatus = await _updateUserStatus(
-      userId,
-      activationStatus.ACTIVE
-    );
-    if (updateStatus) {
-      callback(true);
-    } else {
+    try {
+      const updateStatus = await _updateUserStatus(
+        userId,
+        activationStatus.ACTIVE
+      );
+      if (updateStatus) {
+        callback(true);
+      } else {
+        callback(false);
+      }
+    } catch (err) {
       callback(false);
     }
   },
@@ -585,9 +617,13 @@ module.exports = {
           }
         ],
         async (err, bookings) => {
-          const totalDocuments = await _getBookingHistoryCount();
-          const totalPages = Math.ceil(totalDocuments / limit);
-          callback({ totalPages, bookings });
+          try {
+            const totalDocuments = await _getBookingHistoryCount();
+            const totalPages = Math.ceil(totalDocuments / limit);
+            callback({ totalPages, bookings });
+          } catch (err) {
+            callback({ totalPages: 0, bookings: [] });
+          }
         }
       );
     }

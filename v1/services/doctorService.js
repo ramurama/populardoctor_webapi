@@ -21,57 +21,65 @@ module.exports = {
    * @param {Function} callback
    */
   async createTokenTable(userId, scheduleId, tokenDate, callback) {
-    const doctorId = await _getDoctorIdByUserId(userId);
-    const schedule = await _getSchedule(doctorId, scheduleId);
-    // console.log(getDateTime(tokenDate, schedule.endTime));
-    let tokenTable = new TokenTable();
-    tokenTable.doctorId = doctorId;
-    tokenTable.scheduleId = scheduleId;
-    tokenTable.tokenDate = new Date(tokenDate);
-    tokenTable.startTime = schedule.startTime;
-    tokenTable.endTime = schedule.endTime;
-    let tokens = schedule.tokens;
-    tokens.map(token => {
-      token.status = tokenBookingStatus.OPEN;
-    });
-    tokenTable.tokens = tokens;
-    TokenTable.collection
-      .insertOne(tokenTable)
-      .then(res => callback(true))
-      .catch(err => console.log("***** Error creating token table. " + err));
+    try {
+      const doctorId = await _getDoctorIdByUserId(userId);
+      const schedule = await _getSchedule(doctorId, scheduleId);
+      // console.log(getDateTime(tokenDate, schedule.endTime));
+      let tokenTable = new TokenTable();
+      tokenTable.doctorId = doctorId;
+      tokenTable.scheduleId = scheduleId;
+      tokenTable.tokenDate = new Date(tokenDate);
+      tokenTable.startTime = schedule.startTime;
+      tokenTable.endTime = schedule.endTime;
+      let tokens = schedule.tokens;
+      tokens.map(token => {
+        token.status = tokenBookingStatus.OPEN;
+      });
+      tokenTable.tokens = tokens;
+      TokenTable.collection
+        .insertOne(tokenTable)
+        .then(res => callback(true))
+        .catch(err => console.log("***** Error creating token table. " + err));
+    } catch (err) {
+      callback(false);
+    }
   },
 
   async getNextDayScheduleConfirmations(userid, callback) {
-    const doctorId = await _getDoctorIdByUserId(userid);
-    //today
-    const today = new Date();
-    today.setHours(0);
-    today.setMinutes(0);
-    today.setSeconds(0);
-    //tomorrow
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-    const tomorrowMoment = _getMoment(tomorrow);
+    try {
+      const doctorId = await _getDoctorIdByUserId(userid);
+      //today
+      const today = new Date();
+      today.setHours(0);
+      today.setMinutes(0);
+      today.setSeconds(0);
+      //tomorrow
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      const tomorrowMoment = _getMoment(tomorrow);
 
-    const tokenDate = tomorrowMoment.format("YYYY-MM-DD").toString();
-    const weekday = tomorrowMoment.format("ddd").toString();
+      const tokenDate = tomorrowMoment.format("YYYY-MM-DD").toString();
+      const weekday = tomorrowMoment.format("ddd").toString();
 
-    const schedules = await _getSchedulesForWeekday(doctorId, weekday);
-    const tokenTables = await _getTokenTablesForWeekday(doctorId, tokenDate);
+      const schedules = await _getSchedulesForWeekday(doctorId, weekday);
+      const tokenTables = await _getTokenTablesForWeekday(doctorId, tokenDate);
 
-    let nextDayScheduleConfirmations = schedules
-      .map(schedule => {
-        const tokenTable = tokenTables.find(tokenTable => {
-          return utils.isEqual(schedule._id, tokenTable.scheduleId);
+      let nextDayScheduleConfirmations = schedules
+        .map(schedule => {
+          const tokenTable = tokenTables.find(tokenTable => {
+            return utils.isEqual(schedule._id, tokenTable.scheduleId);
+          });
+          if (utils.isNullOrEmpty(tokenTable)) {
+            return schedule;
+          }
+        })
+        .filter(schedule => {
+          return !utils.isNullOrEmpty(schedule);
         });
-        if (utils.isNullOrEmpty(tokenTable)) {
-          return schedule;
-        }
-      })
-      .filter(schedule => {
-        return !utils.isNullOrEmpty(schedule);
-      });
-    callback(nextDayScheduleConfirmations);
+      callback(nextDayScheduleConfirmations);
+    } catch (err) {
+      callback([]);
+    }
   },
 
   /**
@@ -81,98 +89,102 @@ module.exports = {
    * @param {Function} callback
    */
   async getBookingHistory(userId, callback) {
-    const doctorId = await _getDoctorIdByUserId(userId);
-    const today = utils.getDateString(new Date());
-    const yesterday = new Date(today).setDate(new Date().getDate() - 1);
-    const threeMonthsPast = new Date(yesterday).setMonth(
-      new Date().getMonth() - 3
-    );
+    try {
+      const doctorId = await _getDoctorIdByUserId(userId);
+      const today = utils.getDateString(new Date());
+      const yesterday = new Date(today).setDate(new Date().getDate() - 1);
+      const threeMonthsPast = new Date(yesterday).setMonth(
+        new Date().getMonth() - 3
+      );
 
-    Booking.aggregate(
-      [
-        {
-          $match: {
-            doctorId: mongoose.Types.ObjectId(doctorId),
-            tokenDate: {
-              $gte: new Date(threeMonthsPast)
-            },
-            status: tokenBookingStatus.VISITED
+      Booking.aggregate(
+        [
+          {
+            $match: {
+              doctorId: mongoose.Types.ObjectId(doctorId),
+              tokenDate: {
+                $gte: new Date(threeMonthsPast)
+              },
+              status: tokenBookingStatus.VISITED
+            }
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "userId",
+              foreignField: "_id",
+              as: "userDetails"
+            }
+          },
+          {
+            $unwind: "$userDetails"
+          },
+          {
+            $lookup: {
+              from: "schedules",
+              localField: "scheduleId",
+              foreignField: "_id",
+              as: "scheduleDetails"
+            }
+          },
+          {
+            $unwind: "$scheduleDetails"
+          },
+          {
+            $lookup: {
+              from: "hospitals",
+              localField: "scheduleDetails.hospitalId",
+              foreignField: "_id",
+              as: "hospitalDetails"
+            }
+          },
+          {
+            $unwind: "$hospitalDetails"
+          },
+          {
+            $sort: {
+              bookingId: -1
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              userId: 0,
+              doctorId: 0,
+              scheduleId: 0,
+              startTime: 0,
+              endTime: 0,
+              latLng: 0,
+              startTimeStamp: 0,
+              endTimeStamp: 0,
+              bookedTimeStamp: 0,
+              status: 0,
+              scheduleDetails: 0,
+              "userDetails._id": 0,
+              "userDetails.password": 0,
+              "userDetails.userType": 0,
+              "userDetails.status": 0,
+              "userDetails.userId": 0,
+              "userDetails.dateOfBirth": 0,
+              "userDetails.gender": 0,
+              "userDetails.deviceToken": 0,
+              "userDetails.favorites": 0,
+              "hospitalDetails._id": 0,
+              "hospitalDetails.landmark": 0
+            }
           }
-        },
-        {
-          $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            as: "userDetails"
-          }
-        },
-        {
-          $unwind: "$userDetails"
-        },
-        {
-          $lookup: {
-            from: "schedules",
-            localField: "scheduleId",
-            foreignField: "_id",
-            as: "scheduleDetails"
-          }
-        },
-        {
-          $unwind: "$scheduleDetails"
-        },
-        {
-          $lookup: {
-            from: "hospitals",
-            localField: "scheduleDetails.hospitalId",
-            foreignField: "_id",
-            as: "hospitalDetails"
-          }
-        },
-        {
-          $unwind: "$hospitalDetails"
-        },
-        {
-          $sort: {
-            bookingId: -1
-          }
-        },
-        {
-          $project: {
-            _id: 0,
-            userId: 0,
-            doctorId: 0,
-            scheduleId: 0,
-            startTime: 0,
-            endTime: 0,
-            latLng: 0,
-            startTimeStamp: 0,
-            endTimeStamp: 0,
-            bookedTimeStamp: 0,
-            status: 0,
-            scheduleDetails: 0,
-            "userDetails._id": 0,
-            "userDetails.password": 0,
-            "userDetails.userType": 0,
-            "userDetails.status": 0,
-            "userDetails.userId": 0,
-            "userDetails.dateOfBirth": 0,
-            "userDetails.gender": 0,
-            "userDetails.deviceToken": 0,
-            "userDetails.favorites": 0,
-            "hospitalDetails._id": 0,
-            "hospitalDetails.landmark": 0
+        ],
+        (err, bookings) => {
+          if (err) {
+            callback(null);
+          } else {
+            callback(bookings);
           }
         }
-      ],
-      (err, bookings) => {
-        if (err) {
-          callback(null);
-        } else {
-          callback(bookings);
-        }
-      }
-    );
+      );
+    } catch (err) {
+      callback([]);
+    }
   },
 
   /**
@@ -183,53 +195,69 @@ module.exports = {
    * @param {Function} callback
    */
   async getTodaysBookings(userId, callback) {
-    const today = utils.getDateString(new Date());
-    const doctorId = await _getDoctorIdByUserId(userId);
-    const bookings = await _getBookingsForTheDay(today, doctorId);
-    const schedules = await _getSchedulesForTheDay(today, doctorId);
+    try {
+      const today = utils.getDateString(new Date());
+      const doctorId = await _getDoctorIdByUserId(userId);
 
-    let todaysBookings = [];
-    schedules.forEach(schedule => {
-      const visitorsList = bookings
-        .map(booking => {
-          const nowMoment = _getMoment(new Date());
-          const endTimeMoment = _getMoment(booking.endTimeStamp);
-          if (
-            utils.isEqual(schedule._id, booking.scheduleId) &&
-            !nowMoment.isAfter(endTimeMoment)
-          ) {
-            const { userDetails, token, bookingId } = booking;
-            return {
-              bookingId,
-              name: userDetails.fullName,
-              number: userDetails.username,
-              tokenNumber: token.number,
-              tokenType: token.type,
-              tokenTime: token.time
+      const bookingsPromise = _getBookingsForTheDay(today, doctorId);
+      const schedulesPromise = _getSchedulesForTheDay(today, doctorId);
+
+      Promise.all([bookingsPromise, schedulesPromise])
+        .then(data => {
+          bookings = data[0];
+          schedules = data[1];
+
+          let todaysBookings = [];
+          schedules.forEach(schedule => {
+            const visitorsList = bookings
+              .map(booking => {
+                const nowMoment = _getMoment(new Date());
+                const endTimeMoment = _getMoment(booking.endTimeStamp);
+                if (
+                  utils.isEqual(schedule._id, booking.scheduleId) &&
+                  !nowMoment.isAfter(endTimeMoment)
+                ) {
+                  const { userDetails, token, bookingId } = booking;
+                  return {
+                    bookingId,
+                    name: userDetails.fullName,
+                    number: userDetails.username,
+                    tokenNumber: token.number,
+                    tokenType: token.type,
+                    tokenTime: token.time
+                  };
+                }
+              })
+              .filter(booking => {
+                if (!utils.isNullOrEmpty(booking)) {
+                  return booking;
+                }
+              });
+            const { hospitalDetails, startTime, endTime } = schedule;
+            const obj = {
+              hospitalName: hospitalDetails.name,
+              hospitalTime: startTime + " to " + endTime,
+              appointmentDate: today,
+              visitorsList
             };
-          }
-        })
-        .filter(booking => {
-          if (!utils.isNullOrEmpty(booking)) {
-            return booking;
-          }
-        });
-      const { hospitalDetails, startTime, endTime } = schedule;
-      const obj = {
-        hospitalName: hospitalDetails.name,
-        hospitalTime: startTime + " to " + endTime,
-        appointmentDate: today,
-        visitorsList
-      };
-      todaysBookings.push(obj);
-    });
+            todaysBookings.push(obj);
+          });
 
-    todaysBookings = todaysBookings.filter(booking => {
-      if (!utils.isNullOrEmpty(booking.visitorsList)) {
-        return booking;
-      }
-    });
-    callback(todaysBookings);
+          todaysBookings = todaysBookings.filter(booking => {
+            if (!utils.isNullOrEmpty(booking.visitorsList)) {
+              return booking;
+            }
+          });
+          callback(todaysBookings);
+        })
+        .catch(err => {
+          console.log(err);
+          callback([]);
+        });
+    } catch (err) {
+      console.log(err);
+      callback([]);
+    }
   },
 
   /**
@@ -241,88 +269,92 @@ module.exports = {
    * @param {Function} callback
    */
   async getBookingDetail(userId, bookingId, callback) {
-    const doctorId = await _getDoctorIdByUserId(userId);
-    //bookingId is of type number in DB
-    bookingId = parseInt(bookingId);
-    Booking.aggregate(
-      [
-        {
-          $match: {
-            bookingId,
-            doctorId
+    try {
+      const doctorId = await _getDoctorIdByUserId(userId);
+      //bookingId is of type number in DB
+      bookingId = parseInt(bookingId);
+      Booking.aggregate(
+        [
+          {
+            $match: {
+              bookingId,
+              doctorId
+            }
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "userId",
+              foreignField: "_id",
+              as: "userDetails"
+            }
+          },
+          {
+            $unwind: "$userDetails"
+          },
+          {
+            $lookup: {
+              from: "schedules",
+              localField: "scheduleId",
+              foreignField: "_id",
+              as: "scheduleDetails"
+            }
+          },
+          {
+            $unwind: "$scheduleDetails"
+          },
+          {
+            $lookup: {
+              from: "hospitals",
+              localField: "scheduleDetails.hospitalId",
+              foreignField: "_id",
+              as: "hospitalDetails"
+            }
+          },
+          {
+            $unwind: "$hospitalDetails"
+          },
+          {
+            $project: {
+              _id: 0,
+              userId: 0,
+              doctorId: 0,
+              scheduleId: 0,
+              latLng: 0,
+              startTimeStamp: 0,
+              endTimeStamp: 0,
+              bookedTimeStamp: 0,
+              status: 0,
+              scheduleDetails: 0,
+              "userDetails._id": 0,
+              "userDetails.password": 0,
+              "userDetails.userType": 0,
+              "userDetails.status": 0,
+              "userDetails.userId": 0,
+              "userDetails.dateOfBirth": 0,
+              "userDetails.gender": 0,
+              "userDetails.deviceToken": 0,
+              "userDetails.favorites": 0,
+              "hospitalDetails._id": 0,
+              "hospitalDetails.landmark": 0
+            }
           }
-        },
-        {
-          $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            as: "userDetails"
-          }
-        },
-        {
-          $unwind: "$userDetails"
-        },
-        {
-          $lookup: {
-            from: "schedules",
-            localField: "scheduleId",
-            foreignField: "_id",
-            as: "scheduleDetails"
-          }
-        },
-        {
-          $unwind: "$scheduleDetails"
-        },
-        {
-          $lookup: {
-            from: "hospitals",
-            localField: "scheduleDetails.hospitalId",
-            foreignField: "_id",
-            as: "hospitalDetails"
-          }
-        },
-        {
-          $unwind: "$hospitalDetails"
-        },
-        {
-          $project: {
-            _id: 0,
-            userId: 0,
-            doctorId: 0,
-            scheduleId: 0,
-            latLng: 0,
-            startTimeStamp: 0,
-            endTimeStamp: 0,
-            bookedTimeStamp: 0,
-            status: 0,
-            scheduleDetails: 0,
-            "userDetails._id": 0,
-            "userDetails.password": 0,
-            "userDetails.userType": 0,
-            "userDetails.status": 0,
-            "userDetails.userId": 0,
-            "userDetails.dateOfBirth": 0,
-            "userDetails.gender": 0,
-            "userDetails.deviceToken": 0,
-            "userDetails.favorites": 0,
-            "hospitalDetails._id": 0,
-            "hospitalDetails.landmark": 0
+        ],
+        (err, booking) => {
+          if (utils.isNullOrEmpty(booking)) {
+            callback(
+              false,
+              "Appointment has been made for a different doctor.",
+              null
+            );
+          } else {
+            callback(true, null, booking[0]);
           }
         }
-      ],
-      (err, booking) => {
-        if (utils.isNullOrEmpty(booking)) {
-          callback(
-            false,
-            "Appointment has been made for a different doctor.",
-            null
-          );
-        } else {
-          callback(true, null, booking[0]);
-        }
-      }
-    );
+      );
+    } catch (err) {
+      callback(false, "Unknown error!", null);
+    }
   },
 
   /**
@@ -336,10 +368,14 @@ module.exports = {
   async confirmVisit(bookingId, callback) {
     //bookingId is of type number in DB
     bookingId = parseInt(bookingId);
-    const status = await _confirmVisit(bookingId);
-    if (status) {
-      callback(true);
-    } else {
+    try {
+      const status = await _confirmVisit(bookingId);
+      if (status) {
+        callback(true);
+      } else {
+        callback(false);
+      }
+    } catch (err) {
       callback(false);
     }
   },
@@ -358,11 +394,15 @@ module.exports = {
           reject(false);
         } else {
           if (utils.isEqual(parseInt(otp), booking.otp)) {
-            const bookingUpdateStatus = await _confirmVisit(bookingId);
-            if (bookingUpdateStatus) {
-              resolve({ status: true, message: null });
-            } else {
-              resolve({ status: false, message: "Unknown error!" });
+            try {
+              const bookingUpdateStatus = await _confirmVisit(bookingId);
+              if (bookingUpdateStatus) {
+                resolve({ status: true, message: null });
+              } else {
+                resolve({ status: false, message: "Unknown error!" });
+              }
+            } catch (err) {
+              reject(err);
             }
           } else {
             resolve({ status: false, message: "Incorrect OTP entered." });

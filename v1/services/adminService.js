@@ -37,7 +37,8 @@ module.exports = {
     //user document
     let user = new User();
     user.username = mobile;
-    (user.userType = userType.DOCTOR), (user.status = activationStatus.ACTIVE);
+    user.userType = userType.DOCTOR;
+    user.status = activationStatus.ACTIVE;
     user.fullName = fullName;
     user.dateOfBirth = dateOfBirth;
     user.gender = gender;
@@ -834,6 +835,113 @@ module.exports = {
         callback(masterData);
       }
     });
+  },
+
+  /**
+   * createFrontdeskUser method is used to create a frontdesk user
+   *
+   * @param {Object} userData
+   * @param {Function} callback
+   */
+  createFrontdeskUser(userData, callback) {
+    const { mobile, fullName, password, doctorId, hospitalId } = userData;
+    //user document
+    let user = new User();
+    user.username = mobile;
+    user.userType = userType.FRONTDESK;
+    user.status = activationStatus.ACTIVE;
+    user.fullName = fullName;
+    user.password = bcrypt.hashSync(
+      password,
+      bcrypt.genSaltSync(passwordConfig.SALT)
+    );
+
+    User.collection
+      .insertOne(user)
+      .then(res => {
+        Schedule.updateMany(
+          {
+            doctorId: mongoose.Types.ObjectId(doctorId),
+            hospitalId: mongoose.Types.ObjectId(hospitalId)
+          },
+          {
+            $set: {
+              frontdeskUserId: user._id
+            }
+          },
+          (err, raw) => {
+            if (err) {
+              callback(false);
+            } else {
+              callback(true);
+            }
+          }
+        );
+      })
+      .catch(err => console.log("Error creating frontdesk user. " + err));
+  },
+
+  /**
+   * getDoctorFrontdeskUsers method is used to fetch the frontdesk user for the given doctorId and hospitalId
+   *
+   * @param {String} doctorId
+   * @param {String} hospitalId
+   * @param {Function} callback
+   */
+  getDoctorFrontdeskUsers(doctorId, hospitalId, callback) {
+    Schedule.aggregate(
+      [
+        {
+          $match: {
+            doctorId: mongoose.Types.ObjectId(doctorId),
+            hospitalId: mongoose.Types.ObjectId(hospitalId)
+          }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "frontdeskUserId",
+            foreignField: "_id",
+            as: "userDetails"
+          }
+        },
+        {
+          $unwind: "$userDetails"
+        },
+        {
+          $limit: 1
+        },
+        {
+          $project: {
+            _id: 0,
+            doctorId: 0,
+            hospitalId: 0,
+            tokens: 0,
+            weekday: 0,
+            startTime: 0,
+            endTime: 0,
+            isDeleted: 0,
+            frontdeskUserId: 0,
+            "userDetails.userType": 0,
+            "userDetails.status": 0,
+            "userDetails.password": 0,
+            "userDetails.favorites": 0
+          }
+        }
+      ],
+      (err, user) => {
+        if (err) {
+          callback({});
+        } else {
+          if (!utils.isNullOrEmpty(user)) {
+            const { _id, username, fullName } = user[0].userDetails;
+            callback({ userId: _id, mobile: username, fullName });
+          } else {
+            callback({});
+          }
+        }
+      }
+    );
   }
 };
 

@@ -23,6 +23,8 @@ module.exports = {
   CREATE_DOCTOR: "/api/v1/admin/createDoctor",
   CREATE_HOSPITAL: "/api/v1/admin/createHospital",
   CREATE_SCHEDULE: "/api/v1/admin/createSchedule",
+  CREATE_FRONTDESK_USER: "/api/v1/admin/createFrontdeskUser",
+  GET_DR_FRONTDESK_USER: "/api/v1/admin/getDoctorFrontdeskUser",
   GET_DOCTORS: "/api/v1/admin/getDoctors",
   GET_CUSTOMERS: "/api/v1/admin/getCustomers",
   GET_FRONTDESK_USERS: "/api/v1/admin/getFrontdeskUsers",

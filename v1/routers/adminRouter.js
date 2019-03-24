@@ -121,4 +121,20 @@ module.exports = app => {
       res.send(hospitals);
     });
   });
+
+  app.post(routes.CREATE_FRONTDESK_USER, (req, res) => {
+    adminService.createFrontdeskUser(req.body, status => {
+      res.send({ status });
+    });
+  });
+
+  app.get(
+    routes.GET_DR_FRONTDESK_USER + "/:doctorId/:hospitalId",
+    (req, res) => {
+      const { doctorId, hospitalId } = req.params;
+      adminService.getDoctorFrontdeskUsers(doctorId, hospitalId, user => {
+        res.send(user);
+      });
+    }
+  );
 };

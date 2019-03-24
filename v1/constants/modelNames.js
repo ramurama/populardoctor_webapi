@@ -10,5 +10,6 @@ module.exports = {
   BOOKING: "bookings",
   AUTO_NUMBER: "auto_numbers",
   BOOKING_OTP: "booking_otps",
-  USER_SUPPORT: "user_supports"
+  USER_SUPPORT: "user_supports",
+  FRONTDESK_USER: "frontdesk_users"
 };

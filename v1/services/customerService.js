@@ -732,18 +732,24 @@ function _computeAvailabilityStatus(tokenTableDoc) {
   const bookingTimeStartMoment = moment(startTimeMoment);
   bookingTimeStartMoment.subtract(BOOKING_TIME_LIMIT, "hours");
 
+  // console.log("*******************");
   // console.log(nowMoment);
-  // console.log(startTimeMoment);
+  // console.log(bookingTimeStartMoment);
   // console.log(endTimeMoment);
 
   let isBookingTimeAllowed = false;
-  isBookingTimeAllowed =
-    nowMoment.isBetween(startTimeMoment, endTimeMoment) ||
-    nowMoment.isBetween(bookingTimeStartMoment, endTimeMoment);
+  isBookingTimeAllowed = nowMoment.isBetween(
+    bookingTimeStartMoment,
+    endTimeMoment
+  );
 
   const isTokensOpen = tokenTableDoc.tokens.some(token =>
     utils.isStringsEqual(token.status, tokenBookingStatus.OPEN)
   );
+
+  // console.log("*******************");
+  // console.log(isBookingTimeAllowed);
+  // console.log(isTokensOpen);
 
   return isBookingTimeAllowed && isTokensOpen;
 }

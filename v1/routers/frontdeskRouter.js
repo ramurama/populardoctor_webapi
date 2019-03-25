@@ -1,59 +1,27 @@
 const routes = require("../constants/routes");
 const passport = require("passport");
+const frontdeskService = require("../services/frontdeskService");
 const doctorService = require("../services/doctorService");
 
 module.exports = app => {
-  app.post(
-    routes.CONFIRM_SCHEDULE,
+  app.get(
+    routes.GET_FD_TODAYS_BOOKINGS,
     passport.authenticate("jwt"),
     (req, res) => {
-      const userId = req.user._id;
-      const { scheduleId, tokenDate } = req.body;
-      doctorService.createTokenTable(userId, scheduleId, tokenDate, status => {
-        res.send({ status });
+      const frontdeskUserId = req.user._id;
+      frontdeskService.getTodaysBookings(frontdeskUserId, schedules => {
+        res.send(schedules);
       });
     }
   );
 
   app.get(
-    routes.GET_NEXT_DAY_SCHEDULE_CONFIRMATIONS,
+    routes.GET_FD_QR_BOOKING_DETAIL + "/:bookingId",
     passport.authenticate("jwt"),
     (req, res) => {
-      doctorService.getNextDayScheduleConfirmations(req.user._id, data => {
-        res.send(data);
-      });
-    }
-  );
-
-  app.get(
-    routes.GET_BOOKING_HISTORY_DR,
-    passport.authenticate("jwt"),
-    (req, res) => {
-      doctorService.getBookingHistory(req.user._id, bookings => {
-        res.send(bookings);
-      });
-    }
-  );
-
-  app.get(
-    routes.GET_TODAYS_BOOKINGS,
-    passport.authenticate("jwt"),
-    (req, res) => {
-      doctorService.getTodaysBookings(req.user._id, bookings => {
-        res.send(bookings);
-      });
-    }
-  );
-
-  app.get(
-    routes.GET_QR_BOOKING_DETAIL + "/:bookingId",
-    passport.authenticate("jwt"),
-    (req, res) => {
-      const userId = req.user._id;
-      const { bookingId } = req.params;
-      doctorService.getBookingDetail(
-        userId,
-        bookingId,
+      frontdeskService.getBookingDetail(
+        req.user._id,
+        req.params.bookingId,
         (status, message, bookingDetail) => {
           res.send({ status, message, bookingDetail });
         }
@@ -61,8 +29,8 @@ module.exports = app => {
     }
   );
 
-  app.put(
-    routes.CONFIRM_VISITING + "/:bookingId",
+  app.get(
+    routes.CONFIRM_VISITING_FD + "/:bookingId",
     passport.authenticate("jwt"),
     (req, res) => {
       const { bookingId } = req.params;
@@ -73,7 +41,7 @@ module.exports = app => {
   );
 
   app.post(
-    routes.VERIFY_BOOKING_OTP,
+    routes.VERIFY_BOOKING_OTP_FD,
     passport.authenticate("jwt"),
     async (req, res) => {
       const { otp, bookingId } = req.body;
@@ -87,7 +55,7 @@ module.exports = app => {
   );
 
   app.get(
-    routes.GET_BOOKING_STATUS + "/:bookingId",
+    routes.GET_FD_BOOKING_STATUS + "/:bookingId",
     passport.authenticate("jwt"),
     async (req, res) => {
       try {

@@ -60,5 +60,12 @@ module.exports = {
   GET_QR_BOOKING_DETAIL: "/api/v1/doctor/getBookingDetail",
   CONFIRM_VISITING: "/api/v1/doctor/confirmVisit",
   VERIFY_BOOKING_OTP: "/api/v1/doctor/verifyBookingOtp",
-  GET_BOOKING_STATUS: "/api/v1/doctor/getBookingStatus"
+  GET_BOOKING_STATUS: "/api/v1/doctor/getBookingStatus",
+
+  //frontdesk
+  GET_FD_TODAYS_BOOKINGS: "/api/v1/frontdesk/getTodaysBookings",
+  GET_FD_QR_BOOKING_DETAIL: "/api/v1/frontdesk/getBookingDetail",
+  CONFIRM_VISITING_FD: "/api/v1/frontdesk/confirmVisit",
+  VERIFY_BOOKING_OTP_FD: "/api/v1/frontdesk/verifyBookingOtp",
+  GET_FD_BOOKING_STATUS: "/api/v1/frontdesk/getBookingStatus"
 };

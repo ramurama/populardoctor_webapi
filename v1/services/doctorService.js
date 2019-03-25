@@ -261,7 +261,7 @@ module.exports = {
   },
 
   /**
-   * getBookingDetail method fetched the details of the booking.
+   * getBookingDetail method fetches the details of the booking.
    * If the booking belogs to a different doctor then error message will be sent to the user.
    *
    * @param {String} userId

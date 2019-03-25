@@ -1,4 +1,5 @@
 const _ = require("underscore");
+const momentTz = require("moment-timezone");
 
 module.exports = {
   isNullOrEmpty(data) {
@@ -36,5 +37,9 @@ module.exports = {
       "-" +
       ("0" + date.getDate()).slice(-2)
     );
+  },
+
+  getMoment(time) {
+    return momentTz.tz(time, "Asia/Calcutta");
   }
 };

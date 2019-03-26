@@ -61,6 +61,8 @@ module.exports = {
   CONFIRM_VISITING: "/api/v1/doctor/confirmVisit",
   VERIFY_BOOKING_OTP: "/api/v1/doctor/verifyBookingOtp",
   GET_BOOKING_STATUS: "/api/v1/doctor/getBookingStatus",
+  GET_CONFIRMED_SCHEDULES_DR: "/api/v1/doctor/getConfirmedSchedules",
+  BLOCK_SCHEDULE_DR: "/api/v1/doctor/blockSchedule",
 
   //frontdesk
   GET_FD_TODAYS_BOOKINGS: "/api/v1/frontdesk/getTodaysBookings",

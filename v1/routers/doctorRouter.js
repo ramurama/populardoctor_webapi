@@ -100,4 +100,15 @@ module.exports = app => {
       }
     }
   );
+
+  app.get(
+    routes.GET_CONFIRMED_SCHEDULES_DR,
+    passport.authenticate("jwt"),
+    (req, res) => {
+      const userId = req.user._id;
+      doctorService.getConfirmedSchedules(userId, confirmedSchedules => {
+        res.send(confirmedSchedules);
+      });
+    }
+  );
 };

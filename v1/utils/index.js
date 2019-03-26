@@ -1,4 +1,5 @@
 const _ = require("underscore");
+const moment = require("moment");
 const momentTz = require("moment-timezone");
 
 module.exports = {
@@ -41,5 +42,21 @@ module.exports = {
 
   getMoment(time) {
     return momentTz.tz(time, "Asia/Calcutta");
+  },
+
+  getDateTime(date, time) {
+    const timeArr = _get24HrFormatTime(time).split(":");
+    date = new Date(date);
+    date.setHours(timeArr[0]);
+    date.setMinutes(timeArr[1]);
+    return _getMoment(date);
   }
 };
+
+function _get24HrFormatTime(time) {
+  return moment(time, ["h:mm A"]).format("HH:mm");
+}
+
+function _getMoment(time) {
+  return momentTz.tz(time, "Asia/Calcutta");
+}

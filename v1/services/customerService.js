@@ -452,10 +452,11 @@ module.exports = {
           tokenDate
         );
         const { startTime, endTime } = tokenTableDoc;
-        const startTimeStamp = _getDateTime(tokenDate, startTime)
+        const startTimeStamp = utils
+          .getDateTime(tokenDate, startTime)
           .subtract(BOOKING_TIME_LIMIT, "hours")
           .toDate();
-        const endTimeStamp = _getDateTime(tokenDate, endTime).toDate();
+        const endTimeStamp = utils.getDateTime(tokenDate, endTime).toDate();
         const selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
         delete selectedToken.status;
 
@@ -628,11 +629,11 @@ module.exports = {
           let currentBookings = [];
           let pastBookings = [];
           bookings.forEach(booking => {
-            const tokenEndMoment = _getDateTime(
+            const tokenEndMoment = utils.getDateTime(
               booking.tokenDate,
               booking.endTime
             );
-            const nowMoment = _getMoment(new Date());
+            const nowMoment = utils.getMoment(new Date());
             if (
               !nowMoment.isAfter(tokenEndMoment) &&
               utils.isStringsEqual(booking.status, tokenBookingStatus.BOOKED)
@@ -724,9 +725,9 @@ function _computeAvailabilityStatus(tokenTableDoc) {
   bookingThreshold.setHours(now.getHours() - BOOKING_TIME_LIMIT);
   const { startTime, endTime, tokenDate } = tokenTableDoc;
 
-  const nowMoment = _getMoment(now);
-  const startTimeMoment = _getDateTime(tokenDate, startTime);
-  const endTimeMoment = _getDateTime(tokenDate, endTime);
+  const nowMoment = utils.getMoment(now);
+  const startTimeMoment = utils.getDateTime(tokenDate, startTime);
+  const endTimeMoment = utils.getDateTime(tokenDate, endTime);
 
   //cloning start time
   const bookingTimeStartMoment = moment(startTimeMoment);
@@ -752,22 +753,6 @@ function _computeAvailabilityStatus(tokenTableDoc) {
   // console.log(isTokensOpen);
 
   return isBookingTimeAllowed && isTokensOpen;
-}
-
-function _getMoment(time) {
-  return momentTz.tz(time, "Asia/Calcutta");
-}
-
-function _get24HrFormatTime(time) {
-  return moment(time, ["h:mm A"]).format("HH:mm");
-}
-
-function _getDateTime(date, time) {
-  const timeArr = _get24HrFormatTime(time).split(":");
-  date = new Date(date);
-  date.setHours(timeArr[0]);
-  date.setMinutes(timeArr[1]);
-  return _getMoment(date);
 }
 
 /**

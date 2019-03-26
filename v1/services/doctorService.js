@@ -56,7 +56,7 @@ module.exports = {
       //tomorrow
       const tomorrow = new Date(today);
       tomorrow.setDate(today.getDate() + 1);
-      const tomorrowMoment = _getMoment(tomorrow);
+      const tomorrowMoment = utils.getMoment(tomorrow);
 
       const tokenDate = tomorrowMoment.format("YYYY-MM-DD").toString();
       const weekday = tomorrowMoment.format("ddd").toString();
@@ -211,8 +211,8 @@ module.exports = {
           schedules.forEach(schedule => {
             const visitorsList = bookings
               .map(booking => {
-                const nowMoment = _getMoment(new Date());
-                const endTimeMoment = _getMoment(booking.endTimeStamp);
+                const nowMoment = utils.getMoment(new Date());
+                const endTimeMoment = utils.getMoment(booking.endTimeStamp);
                 if (
                   utils.isEqual(schedule._id, booking.scheduleId) &&
                   !nowMoment.isAfter(endTimeMoment)
@@ -428,6 +428,103 @@ module.exports = {
         }
       });
     });
+  },
+
+  /**
+   * getConfirmedSchedules method fetches all the schedules
+   * that are confirmed by the doctor for the given date.
+   *
+   * @param {String} doctorId
+   * @param {Function} callback
+   */
+  async getConfirmedSchedules(userId, callback) {
+    try {
+      const doctorId = await _getDoctorIdByUserId(userId);
+      const today = utils.getDateString(new Date());
+      TokenTable.aggregate(
+        [
+          {
+            $match: {
+              doctorId: mongoose.Types.ObjectId(doctorId),
+              tokenDate: new Date(today)
+            }
+          },
+          {
+            $lookup: {
+              from: "schedules",
+              localField: "scheduleId",
+              foreignField: "_id",
+              as: "scheduleDetails"
+            }
+          },
+          {
+            $unwind: "$scheduleDetails"
+          },
+          {
+            $lookup: {
+              from: "hospitals",
+              localField: "scheduleDetails.hospitalId",
+              foreignField: "_id",
+              as: "hospitalDetails"
+            }
+          },
+          {
+            $unwind: "$hospitalDetails"
+          },
+          {
+            $project: {
+              tokens: 0,
+              doctorId: 0,
+              tokenDate: 0,
+              scheduleDetails: 0,
+              "hospitalDetails._id": 0,
+              "hospitalDetails.landmark": 0,
+              "hospitalDetails.address": 0,
+              "hospitalDetails.pincode": 0
+            }
+          }
+        ],
+        (err, tokenTableDocs) => {
+          if (err) {
+            console.log(err);
+            callback([]);
+          } else {
+            let confirmedSchedules = tokenTableDocs
+              .map(doc => {
+                const {
+                  _id,
+                  scheduleId,
+                  startTime,
+                  endTime,
+                  hospitalDetails
+                } = doc;
+                return {
+                  tokenTableId: _id,
+                  scheduleId,
+                  startTime,
+                  endTime,
+                  hospitalName: hospitalDetails.name,
+                  hospitalLocation: hospitalDetails.location
+                };
+              })
+              .filter(schedule => {
+                const endTimeMoment = utils.getDateTime(
+                  new Date(),
+                  schedule.endTime
+                );
+                const nowMoment = utils.getMoment(new Date());
+                if (!nowMoment.isAfter(endTimeMoment)) {
+                  return schedule;
+                }
+              });
+            callback(confirmedSchedules);
+          }
+        }
+      );
+    } catch (err) {
+      console.log(err);
+      callback([]);
+    }
   }
 };
 
@@ -464,10 +561,6 @@ function _getSchedule(doctorId, scheduleId) {
       }
     });
   });
-}
-
-function _getMoment(time) {
-  return momentTz.tz(time, "Asia/Calcutta");
 }
 
 /**

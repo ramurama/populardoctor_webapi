@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const modelNames = require("../constants/modelNames");
 const Schedule = mongoose.model(modelNames.SCHEDULE);
 const Booking = mongoose.model(modelNames.BOOKING);
+const TokenTable = mongoose.model(modelNames.TOKEN_TABLE);
 const tokenBookingStatus = require("../constants/tokenBookingStatus");
 const utils = require("../utils");
 const moment = require("moment");
@@ -81,7 +82,7 @@ module.exports = {
 
   /**
    * getBookingDetail method fetches the details of the booking.
-   * If the booking belogs to a different doctor and hospital 
+   * If the booking belogs to a different doctor and hospital
    * then error message will be sent to the user.
    *
    * @param {String} frontdeskUserId
@@ -181,6 +182,118 @@ module.exports = {
       );
     } catch (err) {
       console.log(err);
+    }
+  },
+
+  /**
+   * getConfirmedSchedules method fetches all the schedules
+   * that are confirmed by the doctor for the given date.
+   *
+   * @param {String} frontdeskUserId
+   * @param {Function} callback
+   */
+  async getConfirmedSchedules(frontdeskUserId, callback) {
+    try {
+      const weekday = moment(new Date()).format("ddd");
+      const today = utils.getDateString(new Date());
+      const { doctorId } = await _getFrontdeskDetails(frontdeskUserId);
+      let schedules = await _getTodaysSchedule(frontdeskUserId, weekday);
+      //reconstruct the schedules array to have only scheduleIds
+      schedules = schedules.map(schedule => {
+        return schedule._id.toString();
+      });
+
+      //fetch tokenTable docs of the doctor
+      TokenTable.aggregate(
+        [
+          {
+            $match: {
+              doctorId: mongoose.Types.ObjectId(doctorId),
+              tokenDate: new Date(today)
+            }
+          },
+          {
+            $lookup: {
+              from: "schedules",
+              localField: "scheduleId",
+              foreignField: "_id",
+              as: "scheduleDetails"
+            }
+          },
+          {
+            $unwind: "$scheduleDetails"
+          },
+          {
+            $lookup: {
+              from: "hospitals",
+              localField: "scheduleDetails.hospitalId",
+              foreignField: "_id",
+              as: "hospitalDetails"
+            }
+          },
+          {
+            $unwind: "$hospitalDetails"
+          },
+          {
+            $project: {
+              tokens: 0,
+              doctorId: 0,
+              tokenDate: 0,
+              scheduleDetails: 0,
+              "hospitalDetails._id": 0,
+              "hospitalDetails.landmark": 0,
+              "hospitalDetails.address": 0,
+              "hospitalDetails.pincode": 0
+            }
+          }
+        ],
+        (err, tokenTableDocs) => {
+          if (err) {
+            console.log(err);
+            callback([]);
+          } else {
+            let confirmedSchedules = tokenTableDocs
+              .map(doc => {
+                const {
+                  _id,
+                  scheduleId,
+                  startTime,
+                  endTime,
+                  hospitalDetails
+                } = doc;
+                return {
+                  tokenTableId: _id,
+                  scheduleId,
+                  startTime,
+                  endTime,
+                  hospitalName: hospitalDetails.name,
+                  hospitalLocation: hospitalDetails.location
+                };
+              })
+              .filter(schedule => {
+                const endTimeMoment = utils.getDateTime(
+                  new Date(),
+                  schedule.endTime
+                );
+                const nowMoment = utils.getMoment(new Date());
+                if (!nowMoment.isAfter(endTimeMoment)) {
+                  return schedule;
+                }
+              });
+            //check if scheduleId is available in the schedules array.
+            //schedules array contains only scheduleIds that are mapped for the frondesk user.
+            confirmedSchedules = confirmedSchedules.filter(cnfSchedule => {
+              if (schedules.includes(cnfSchedule.scheduleId.toString())) {
+                return cnfSchedule;
+              }
+            });
+            callback(confirmedSchedules);
+          }
+        }
+      );
+    } catch (err) {
+      console.log(err);
+      callback([]);
     }
   }
 };

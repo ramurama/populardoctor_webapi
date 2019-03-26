@@ -111,4 +111,15 @@ module.exports = app => {
       });
     }
   );
+
+  app.put(
+    routes.BLOCK_SCHEDULE_DR + "/:tokenTableId",
+    passport.authenticate("jwt"),
+    (req, res) => {
+      const { tokenTableId } = req.params;
+      doctorService.blockScheduleForTheDay(tokenTableId, status => {
+        res.send({ status });
+      });
+    }
+  );
 };

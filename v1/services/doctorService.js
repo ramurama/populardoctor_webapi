@@ -525,6 +525,45 @@ module.exports = {
       console.log(err);
       callback([]);
     }
+  },
+
+  /**
+   * blockScheduleForTheDay method is used to block the tokenTable document by setting
+   * the status of tokens to CLOSED.
+   * By doing this, users wont be able to book appointments.
+   *
+   * @param {String} tokenTableId
+   * @param {Function} callback
+   */
+  blockScheduleForTheDay(tokenTableId, callback) {
+    const _id = mongoose.Types.ObjectId(tokenTableId);
+    TokenTable.findOne({ _id }, (err, tokenTableDoc) => {
+      if (err) {
+        console.log(err);
+        callback(false);
+      } else {
+        let tokens = tokenTableDoc.tokens;
+        tokens = tokens.map(token => {
+          let status = token.status;
+          if (utils.isStringsEqual(token.status, tokenBookingStatus.OPEN)) {
+            //if token status is OPEN, change to CLOSED
+            status = tokenBookingStatus.CLOSED;
+          }
+          return {
+            ...token,
+            status
+          };
+        });
+        TokenTable.updateOne({ _id }, { $set: { tokens } }, (err, raw) => {
+          if (err) {
+            console.log(err);
+            callback(false);
+          } else {
+            callback(true);
+          }
+        });
+      }
+    });
   }
 };
 

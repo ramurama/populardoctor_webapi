@@ -68,4 +68,29 @@ module.exports = app => {
       }
     }
   );
+
+  app.get(
+    routes.GET_CONFIRMED_SCHEDULES_FD,
+    passport.authenticate("jwt"),
+    (req, res) => {
+      const frontdeskUserId = req.user._id;
+      frontdeskService.getConfirmedSchedules(
+        frontdeskUserId,
+        confirmedSchedules => {
+          res.send(confirmedSchedules);
+        }
+      );
+    }
+  );
+
+  app.put(
+    routes.BLOCK_SCHEDULE_FD + "/:tokenTableId",
+    passport.authenticate("jwt"),
+    (req, res) => {
+      const { tokenTableId } = req.params;
+      doctorService.blockScheduleForTheDay(tokenTableId, status => {
+        res.send({ status });
+      });
+    }
+  );
 };

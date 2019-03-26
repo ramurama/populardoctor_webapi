@@ -29,7 +29,7 @@ module.exports = app => {
     }
   );
 
-  app.get(
+  app.put(
     routes.CONFIRM_VISITING_FD + "/:bookingId",
     passport.authenticate("jwt"),
     (req, res) => {

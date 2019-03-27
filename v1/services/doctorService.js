@@ -9,6 +9,7 @@ const tokenBookingStatus = require("../constants/tokenBookingStatus");
 const utils = require("../utils");
 const moment = require("moment");
 const momentTz = require("moment-timezone");
+const messageService = require("../services/messageService");
 
 module.exports = {
   /**
@@ -473,7 +474,6 @@ module.exports = {
           },
           {
             $project: {
-              tokens: 0,
               doctorId: 0,
               tokenDate: 0,
               scheduleDetails: 0,
@@ -496,6 +496,7 @@ module.exports = {
                   scheduleId,
                   startTime,
                   endTime,
+                  tokens,
                   hospitalDetails
                 } = doc;
                 return {
@@ -503,6 +504,7 @@ module.exports = {
                   scheduleId,
                   startTime,
                   endTime,
+                  tokens,
                   hospitalName: hospitalDetails.name,
                   hospitalLocation: hospitalDetails.location
                 };
@@ -513,7 +515,23 @@ module.exports = {
                   schedule.endTime
                 );
                 const nowMoment = utils.getMoment(new Date());
-                if (!nowMoment.isAfter(endTimeMoment)) {
+                //check if some tokens are OPEN or BOOKED
+                const isSomeTokensOpen = schedule.tokens.some(
+                  token =>
+                    utils.isStringsEqual(
+                      token.status,
+                      tokenBookingStatus.OPEN
+                    ) ||
+                    utils.isStringsEqual(
+                      token.status,
+                      tokenBookingStatus.BOOKED
+                    )
+                );
+                //remove tokens from JSON
+                delete schedule.tokens;
+                //if now is not after endTime and some tokens are open
+                //return the schedule
+                if (!nowMoment.isAfter(endTimeMoment) && isSomeTokensOpen) {
                   return schedule;
                 }
               });
@@ -536,6 +554,7 @@ module.exports = {
    * @param {Function} callback
    */
   blockScheduleForTheDay(tokenTableId, callback) {
+    const today = new Date(utils.getDateString(new Date()));
     const _id = mongoose.Types.ObjectId(tokenTableId);
     TokenTable.findOne({ _id }, (err, tokenTableDoc) => {
       if (err) {
@@ -548,12 +567,26 @@ module.exports = {
           if (utils.isStringsEqual(token.status, tokenBookingStatus.OPEN)) {
             //if token status is OPEN, change to CLOSED
             status = tokenBookingStatus.CLOSED;
+          } else if (
+            utils.isStringsEqual(token.status, tokenBookingStatus.BOOKED)
+          ) {
+            //if token status is BOOKED, change to CANCELLED
+            status = tokenBookingStatus.CANCELLED;
+            //update the document, status field in Bookings collection to CANCELLED
+            //create a temp token without status field and pass it as param to update Booking collection
+            let tempToken = { ...token };
+            delete tempToken.status;
+            _cancelBooking(today, tokenTableDoc.scheduleId, tempToken);
           }
           return {
             ...token,
             status
           };
         });
+
+        //cancelling all fasttrack tokens
+        _cancelAllFastTrackBookings(today, tokenTableDoc.scheduleId);
+
         TokenTable.updateOne({ _id }, { $set: { tokens } }, (err, raw) => {
           if (err) {
             console.log(err);
@@ -789,15 +822,17 @@ function _confirmVisit(bookingId) {
     const visitedTimeStamp = moment(new Date())
       .tz("Asia/Calcutta")
       .format();
-    Booking.updateOne(
+    Booking.findOneAndUpdate(
       { bookingId },
       { $set: { status: tokenBookingStatus.VISITED, visitedTimeStamp } },
-      (err, raw) => {
+      (err, booking) => {
         if (err) {
           reject(err);
         } else {
           //delete booking otp
           _deleteBookingOtp(bookingId);
+          //update the token in tokenTables collection, change the status to VISITED from BOOKED
+          _updateTokenTableTokenStatus(booking);
           resolve(true);
         }
       }
@@ -814,4 +849,164 @@ function _deleteBookingOtp(bookingId) {
   BookingOtp.deleteOne({ bookingId })
     .then(res => console.log("Bookint OTP deleted for bookingId: " + bookingId))
     .catch(err => console.log("Error deleting bookingId." + err));
+}
+
+function _cancelBooking(tokenDate, scheduleId, token) {
+  Booking.findOneAndUpdate(
+    { tokenDate, scheduleId, token },
+    { $set: { status: tokenBookingStatus.CANCELLED } },
+    {},
+    (err, booking) => {
+      if (err) {
+        console.log(err);
+      } else {
+        //notify user
+        console.log("Calcelling regular and premium bookings...");
+        _notifyUser(booking.bookingId);
+      }
+    }
+  );
+}
+
+/**
+ * _cancelAllFastTrackBookings method updates the all the fasttrack tokens
+ * to CANCELLED status if they are OPEN
+ *
+ * @param {Date} tokenDate
+ * @param {Object} scheduleId
+ */
+function _cancelAllFastTrackBookings(tokenDate, scheduleId) {
+  Booking.find(
+    { tokenDate, scheduleId, "token.number": 0 },
+    (err, bookings) => {
+      if (err) {
+        console.log("Error fetching fasttrack tokens for " + tokenDate);
+      } else {
+        bookings.forEach(booking => {
+          const { bookingId, userId } = booking;
+          if (utils.isStringsEqual(booking.status, tokenBookingStatus.BOOKED)) {
+            Booking.updateOne(
+              { bookingId },
+              { $set: { status: tokenBookingStatus.CANCELLED } },
+              (err, raw) => {
+                console.log("Cancelling fasttrack token...");
+                //notify user
+                _notifyUser(bookingId);
+                console.log(raw);
+              }
+            );
+          }
+        });
+      }
+    }
+  );
+}
+
+/**
+ * _notifyUser method is used to send push notification regarding the cancellation of the appointment.
+ *
+ * @param {Number} bookingId
+ */
+function _notifyUser(bookingId) {
+  Booking.aggregate(
+    [
+      {
+        $match: {
+          bookingId
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userDetails"
+        }
+      },
+      {
+        $unwind: "$userDetails"
+      },
+      {
+        $lookup: {
+          from: "doctors",
+          localField: "doctorId",
+          foreignField: "_id",
+          as: "doctorDetails"
+        }
+      },
+      {
+        $unwind: "$doctorDetails"
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "doctorDetails.userId",
+          foreignField: "_id",
+          as: "doctorUserDetails"
+        }
+      },
+      {
+        $unwind: "$doctorUserDetails"
+      }
+    ],
+    (err, booking) => {
+      const doctorName = booking[0].doctorUserDetails.fullName;
+      const title = "Appointment Cancelled!";
+      const message =
+        "Your appointment with Dr. " + doctorName + "  has been cancelled.";
+      messageService.sendPushNotificationByUser(
+        booking[0].userDetails.username,
+        title,
+        message
+      );
+      console.log(booking[0].userId);
+    }
+  );
+}
+
+/**
+ * _updateTokenTableTokenStatus method updates the token status to VISITED from BOOKED
+ *
+ * @param {Object} booking
+ */
+function _updateTokenTableTokenStatus(booking) {
+  const tokenDate = new Date(utils.getDateString(new Date()));
+  const { doctorId, scheduleId, token } = booking;
+  TokenTable.findOne(
+    { tokenDate, doctorId, scheduleId },
+    (err, tokenTableDoc) => {
+      let tokens = tokenTableDoc.tokens;
+      console.log(tokens);
+      const selectedToken = _findToken(tokens, token.number);
+      selectedToken.status = tokenBookingStatus.VISITED;
+      TokenTable.updateOne(
+        { tokenDate, doctorId, scheduleId },
+        { $set: { tokens } },
+        (err, raw) => {
+          if (err) {
+            console.log(
+              "Error updating tokentable token status to VISITED." + err
+            );
+          } else {
+            console.log("TokenTable doc token status updated to VISITED.");
+            console.log(raw);
+          }
+        }
+      );
+    }
+  );
+}
+
+/**
+ * _findToken method finds and returns the token from the given array of tokens.
+ *
+ * @param {Array} tokens
+ * @param {Number} tokenNumber
+ */
+function _findToken(tokens, tokenNumber) {
+  return tokens.find(token => {
+    if (utils.isEqual(token.number, tokenNumber)) {
+      return token;
+    }
+  });
 }

@@ -236,7 +236,6 @@ module.exports = {
           },
           {
             $project: {
-              tokens: 0,
               doctorId: 0,
               tokenDate: 0,
               scheduleDetails: 0,
@@ -255,17 +254,20 @@ module.exports = {
             let confirmedSchedules = tokenTableDocs
               .map(doc => {
                 const {
+                  tokens,
                   _id,
                   scheduleId,
                   startTime,
                   endTime,
                   hospitalDetails
                 } = doc;
+
                 return {
                   tokenTableId: _id,
                   scheduleId,
                   startTime,
                   endTime,
+                  tokens,
                   hospitalName: hospitalDetails.name,
                   hospitalLocation: hospitalDetails.location
                 };
@@ -276,7 +278,23 @@ module.exports = {
                   schedule.endTime
                 );
                 const nowMoment = utils.getMoment(new Date());
-                if (!nowMoment.isAfter(endTimeMoment)) {
+                //check if some tokens are OPEN
+                const isSomeTokensOpen = schedule.tokens.some(
+                  token =>
+                    utils.isStringsEqual(
+                      token.status,
+                      tokenBookingStatus.OPEN
+                    ) ||
+                    utils.isStringsEqual(
+                      token.status,
+                      tokenBookingStatus.BOOKED
+                    )
+                );
+                //remove tokens from JSON
+                delete schedule.tokens;
+                //if now is not after endTime and some tokens are open
+                //return the schedule
+                if (!nowMoment.isAfter(endTimeMoment) && isSomeTokensOpen) {
                   return schedule;
                 }
               });

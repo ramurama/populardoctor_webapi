@@ -16,6 +16,7 @@ const moment = require("moment");
 const momentTz = require("moment-timezone");
 const CronJob = require("cron").CronJob;
 const operations = require("../constants/operation");
+const AsyncLock = require("async-lock");
 
 const BOOKING_TIME_LIMIT = 4; //4 hours
 
@@ -250,67 +251,71 @@ module.exports = {
    * @param {Function} callback
    */
   async getSchedules(userId, callback) {
-    const doctorId = await _getDoctorIdByUserId(userId);
-    Schedule.aggregate(
-      [
-        {
-          $lookup: {
-            from: "hospitals",
-            localField: "hospitalId",
-            foreignField: "_id",
-            as: "hospital"
-          }
-        },
-        {
-          $match: {
-            doctorId: mongoose.Types.ObjectId(doctorId),
-            isDeleted: false
-          }
-        },
-        {
-          $lookup: {
-            from: "doctors",
-            localField: "doctorId",
-            foreignField: "_id",
-            as: "doctorDetails"
-          }
-        },
-        {
-          $unwind: "$doctorDetails"
-        },
-        {
-          $unwind: "$hospital"
-        },
-        {
-          $group: {
-            _id: "$doctorDetails",
-            schedules: {
-              $push: {
-                scheduleId: "$_id",
-                weekday: "$weekday",
-                startTime: "$startTime",
-                endTime: "$endTime",
-                hospital: "$hospital"
+    try {
+      const doctorId = await _getDoctorIdByUserId(userId);
+      Schedule.aggregate(
+        [
+          {
+            $lookup: {
+              from: "hospitals",
+              localField: "hospitalId",
+              foreignField: "_id",
+              as: "hospital"
+            }
+          },
+          {
+            $match: {
+              doctorId: mongoose.Types.ObjectId(doctorId),
+              isDeleted: false
+            }
+          },
+          {
+            $lookup: {
+              from: "doctors",
+              localField: "doctorId",
+              foreignField: "_id",
+              as: "doctorDetails"
+            }
+          },
+          {
+            $unwind: "$doctorDetails"
+          },
+          {
+            $unwind: "$hospital"
+          },
+          {
+            $group: {
+              _id: "$doctorDetails",
+              schedules: {
+                $push: {
+                  scheduleId: "$_id",
+                  weekday: "$weekday",
+                  startTime: "$startTime",
+                  endTime: "$endTime",
+                  hospital: "$hospital"
+                }
               }
             }
           }
+        ],
+        async (err, drSchedules) => {
+          if (err) {
+            callback(false, []);
+          } else {
+            let drScheduleData = {
+              doctorDetails: drSchedules[0]._id,
+              schedules: drSchedules[0].schedules,
+              availabilityStatus: await _getAvailabilityStatus(
+                drSchedules[0]._id._id
+              )
+            };
+            callback(true, drScheduleData);
+          }
         }
-      ],
-      async (err, drSchedules) => {
-        if (err) {
-          callback(false, null);
-        } else {
-          let drScheduleData = {
-            doctorDetails: drSchedules[0]._id,
-            schedules: drSchedules[0].schedules,
-            availabilityStatus: await _getAvailabilityStatus(
-              drSchedules[0]._id._id
-            )
-          };
-          callback(true, drScheduleData);
-        }
-      }
-    );
+      );
+    } catch (err) {
+      callback(false, []);
+    }
   },
 
   /**
@@ -321,17 +326,21 @@ module.exports = {
    * @param {Function} callback
    */
   getTokens(doctorId, scheduleId, callback) {
-    TokenTable.findOne({ doctorId, scheduleId }, (err, tokenTable) => {
-      if (err) {
-        callback(false, null);
-      } else {
-        if (utils.isNullOrEmpty(tokenTable)) {
-          callback(false, []);
+    const tokenDate = new Date(utils.getDateString(new Date()));
+    TokenTable.findOne(
+      { doctorId, scheduleId, tokenDate },
+      (err, tokenTable) => {
+        if (err) {
+          callback(false, null);
         } else {
-          callback(true, tokenTable.tokens);
+          if (utils.isNullOrEmpty(tokenTable)) {
+            callback(false, []);
+          } else {
+            callback(true, tokenTable.tokens);
+          }
         }
       }
-    });
+    );
   },
 
   /**
@@ -428,57 +437,65 @@ module.exports = {
       latLng
     } = bookingData;
     const status = tokenBookingStatus.BOOKED;
-    const isTokenTableDocUpdated = await _updateTokenTableDocStatus(
-      doctorId,
-      scheduleId,
-      tokenDate,
-      tokenNumber,
-      status
-    );
-    if (isTokenTableDocUpdated) {
-      const tokenTableDoc = await _getTokenTableData(
+    try {
+      const isTokenTableDocUpdated = await _updateTokenTableDocStatus(
         doctorId,
         scheduleId,
-        tokenDate
+        tokenDate,
+        tokenNumber,
+        status
       );
-      const { startTime, endTime } = tokenTableDoc;
-      const startTimeStamp = _getDateTime(tokenDate, startTime)
-        .subtract(BOOKING_TIME_LIMIT, "hours")
-        .toDate();
-      const endTimeStamp = _getDateTime(tokenDate, endTime).toDate();
-      const selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
-      delete selectedToken.status;
-      const bookingId = await _getAutoNumber();
-      const bookedTimeStamp = new Date();
-      Booking.collection
-        .insertOne({
-          bookingId,
-          userId,
-          doctorId: mongoose.Types.ObjectId(doctorId),
-          scheduleId: mongoose.Types.ObjectId(scheduleId),
-          tokenDate: new Date(tokenDate),
-          token: selectedToken,
-          startTime,
-          endTime,
-          latLng,
-          startTimeStamp,
-          endTimeStamp,
-          bookedTimeStamp,
-          status
-        })
-        .then(res => {
-          //generate OTP for this booking
-          const otp = utils.generateOtp();
-          BookingOtp.collection
-            .insertOne({ bookingId, otp })
-            .then(res => {
-              callback(true, bookingId);
-            })
-            .catch(err => console.log(err));
-        })
-        .catch(err => console.log(err));
-    } else {
-      callback(false, null);
+      if (isTokenTableDocUpdated) {
+        const tokenTableDoc = await _getTokenTableData(
+          doctorId,
+          scheduleId,
+          tokenDate
+        );
+        const { startTime, endTime } = tokenTableDoc;
+        const startTimeStamp = utils
+          .getDateTime(tokenDate, startTime)
+          .subtract(BOOKING_TIME_LIMIT, "hours")
+          .toDate();
+        const endTimeStamp = utils.getDateTime(tokenDate, endTime).toDate();
+        const selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
+        delete selectedToken.status;
+
+        const bookingId = await _getAutoNumber();
+        const bookedTimeStamp = moment(new Date())
+          .tz("Asia/Calcutta")
+          .format();
+        Booking.collection
+          .insertOne({
+            bookingId,
+            userId,
+            doctorId: mongoose.Types.ObjectId(doctorId),
+            scheduleId: mongoose.Types.ObjectId(scheduleId),
+            tokenDate: new Date(tokenDate),
+            token: selectedToken,
+            startTime,
+            endTime,
+            latLng,
+            startTimeStamp,
+            endTimeStamp,
+            bookedTimeStamp,
+            status
+          })
+          .then(res => {
+            //generate OTP for this booking
+            const otp = utils.generateOtp();
+            BookingOtp.collection
+              .insertOne({ bookingId, otp })
+              .then(res => {
+                callback(true, bookingId);
+              })
+              .catch(err => console.log(err));
+          })
+          .catch(err => console.log(err));
+      } else {
+        callback(false, "");
+      }
+    } catch (err) {
+      callback(false, "");
     }
   },
 
@@ -489,19 +506,25 @@ module.exports = {
    * @param {Function} callback
    */
   getBookingHistory(userId, callback) {
+    const today = utils.getDateString(new Date());
+    const sixMonthsPast = new Date(today).setMonth(new Date().getMonth() - 6);
+
     Booking.aggregate(
       [
+        {
+          $match: {
+            userId,
+            tokenDate: {
+              $gte: new Date(sixMonthsPast)
+            }
+          }
+        },
         {
           $lookup: {
             from: "doctors",
             localField: "doctorId",
             foreignField: "_id",
             as: "doctorDetailsTemp"
-          }
-        },
-        {
-          $match: {
-            userId
           }
         },
         {
@@ -556,11 +579,14 @@ module.exports = {
           }
         },
         {
-          $unwind: "$bookingOtp"
+          $unwind: {
+            path: "$bookingOtp",
+            preserveNullAndEmptyArrays: true
+          }
         },
         {
           $sort: {
-            bookedTimeStamp: -1
+            bookingId: -1
           }
         },
         {
@@ -603,11 +629,11 @@ module.exports = {
           let currentBookings = [];
           let pastBookings = [];
           bookings.forEach(booking => {
-            const tokenEndMoment = _getDateTime(
+            const tokenEndMoment = utils.getDateTime(
               booking.tokenDate,
               booking.endTime
             );
-            const nowMoment = _getMoment(new Date());
+            const nowMoment = utils.getMoment(new Date());
             if (
               !nowMoment.isAfter(tokenEndMoment) &&
               utils.isStringsEqual(booking.status, tokenBookingStatus.BOOKED)
@@ -650,10 +676,7 @@ function _getDoctorIdByUserId(userId) {
  * @param {scheduleId} scheduleId
  */
 function _getAvailabilityStatus(doctorId) {
-  let today = new Date();
-  today.setHours(0);
-  today.setMinutes(0);
-  today.setSeconds(0);
+  let today = new Date(utils.getDateString(new Date()));
 
   return new Promise((resolve, reject) => {
     TokenTable.find(
@@ -702,50 +725,34 @@ function _computeAvailabilityStatus(tokenTableDoc) {
   bookingThreshold.setHours(now.getHours() - BOOKING_TIME_LIMIT);
   const { startTime, endTime, tokenDate } = tokenTableDoc;
 
-  const nowMoment = _getMoment(now);
-  const startTimeMoment = _getDateTime(tokenDate, startTime);
-  const endTimeMoment = _getDateTime(tokenDate, endTime);
+  const nowMoment = utils.getMoment(now);
+  const startTimeMoment = utils.getDateTime(tokenDate, startTime);
+  const endTimeMoment = utils.getDateTime(tokenDate, endTime);
 
   //cloning start time
   const bookingTimeStartMoment = moment(startTimeMoment);
   bookingTimeStartMoment.subtract(BOOKING_TIME_LIMIT, "hours");
 
+  // console.log("*******************");
   // console.log(nowMoment);
-  // console.log(startTimeMoment);
+  // console.log(bookingTimeStartMoment);
   // console.log(endTimeMoment);
 
   let isBookingTimeAllowed = false;
-  isBookingTimeAllowed =
-    nowMoment.isBetween(startTimeMoment, endTimeMoment) ||
-    nowMoment.isBetween(bookingTimeStartMoment, endTimeMoment);
+  isBookingTimeAllowed = nowMoment.isBetween(
+    bookingTimeStartMoment,
+    endTimeMoment
+  );
 
   const isTokensOpen = tokenTableDoc.tokens.some(token =>
     utils.isStringsEqual(token.status, tokenBookingStatus.OPEN)
   );
 
-  console.log(nowMoment);
-  console.log(startTimeMoment);
-  console.log(endTimeMoment);
-  console.log(bookingTimeStartMoment);
+  // console.log("*******************");
+  // console.log(isBookingTimeAllowed);
+  // console.log(isTokensOpen);
 
   return isBookingTimeAllowed && isTokensOpen;
-}
-
-function _getMoment(time) {
-  return momentTz.tz(time, "Asia/Calcutta");
-}
-
-function _get24HrFormatTime(time) {
-  return moment(time, ["h:mm A"]).format("HH:mm");
-}
-
-function _getDateTime(date, time) {
-  // process.env.TZ = "Asia/Calcutta|Asia/Kolkata";
-  const timeArr = _get24HrFormatTime(time).split(":");
-  date = new Date(date);
-  date.setHours(timeArr[0]);
-  date.setMinutes(timeArr[1]);
-  return _getMoment(date);
 }
 
 /**
@@ -863,32 +870,43 @@ function _updateFavorites(mobile, userId, operation) {
 /**
  * _getAutoNumber method fetches the number from collection.
  * It then increments the number by one and is saved to the same document in the collection.
+ * Async-lock has been added inorder to prevent duplication of booking IDs
+ * in the case of concurrency.
  */
 function _getAutoNumber() {
   return new Promise((resolve, reject) => {
-    AutoNumber.find({}, (err, numbers) => {
-      if (err) {
-        reject(err);
-      } else {
-        const { number } = numbers[0];
-        const nextNumber = number + 1;
-        AutoNumber.updateOne(
-          { number },
-          {
-            $set: {
-              number: nextNumber
-            }
-          },
-          (err, raw) => {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(number);
-            }
+    const lock = new AsyncLock();
+    lock
+      .acquire("autoNumber", () => {
+        console.log("auto number lock acquired");
+        AutoNumber.find({}, (err, numbers) => {
+          if (err) {
+            reject(err);
+          } else {
+            const { number } = numbers[0];
+            const nextNumber = number + 1;
+            AutoNumber.updateOne(
+              { number },
+              {
+                $set: {
+                  number: nextNumber
+                }
+              },
+              (err, raw) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve(number);
+                }
+              }
+            );
           }
-        );
-      }
-    });
+        });
+      })
+      .then(() => {
+        console.log("auto number lock released");
+        // lock released
+      });
   });
 }
 

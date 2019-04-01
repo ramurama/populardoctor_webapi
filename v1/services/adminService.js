@@ -37,7 +37,8 @@ module.exports = {
     //user document
     let user = new User();
     user.username = mobile;
-    (user.userType = userType.DOCTOR), (user.status = activationStatus.ACTIVE);
+    user.userType = userType.DOCTOR;
+    user.status = activationStatus.ACTIVE;
     user.fullName = fullName;
     user.dateOfBirth = dateOfBirth;
     user.gender = gender;
@@ -86,21 +87,25 @@ module.exports = {
     Hospital.collection
       .insertOne(hospital)
       .then(async res => {
-        if (await _isLocationExists(location)) {
-          //location already exists in Location collection
-          callback(true);
-        } else {
-          //location document
-          let locationDoc = new Location();
-          locationDoc.name = location;
-          locationDoc.collection
-            .insertOne(locationDoc)
-            .then(res => callback(true))
-            .catch(err =>
-              console.log(
-                "***** Error inserting document into Location. " + err
-              )
-            );
+        try {
+          if (await _isLocationExists(location)) {
+            //location already exists in Location collection
+            callback(true);
+          } else {
+            //location document
+            let locationDoc = new Location();
+            locationDoc.name = location;
+            locationDoc.collection
+              .insertOne(locationDoc)
+              .then(res => callback(true))
+              .catch(err =>
+                console.log(
+                  "***** Error inserting document into Location. " + err
+                )
+              );
+          }
+        } catch (err) {
+          callback(false);
         }
       })
       .catch(err =>
@@ -115,32 +120,36 @@ module.exports = {
    * @param {Function} callback
    */
   async createSchedule(scheduleData, callback) {
-    if (await _isScheduleExists(scheduleData)) {
-      callback(false, "Schedule already exists.");
-    } else {
-      const {
-        doctorId,
-        hospitalId,
-        weekday,
-        startTime,
-        endTime,
-        tokens
-      } = scheduleData;
-      //schedule document
-      let schedule = new Schedule();
-      schedule.doctorId = doctorId;
-      schedule.hospitalId = hospitalId;
-      schedule.weekday = weekday;
-      schedule.startTime = startTime;
-      schedule.endTime = endTime;
-      schedule.tokens = tokens;
-      schedule.isDeleted = false;
-      Schedule.collection
-        .insertOne(schedule)
-        .then(res => callback(true, "Schedule created successfully."))
-        .catch(err =>
-          console.log("***** Error creating schedule document. " + err)
-        );
+    try {
+      if (await _isScheduleExists(scheduleData)) {
+        callback(false, "Schedule already exists.");
+      } else {
+        const {
+          doctorId,
+          hospitalId,
+          weekday,
+          startTime,
+          endTime,
+          tokens
+        } = scheduleData;
+        //schedule document
+        let schedule = new Schedule();
+        schedule.doctorId = doctorId;
+        schedule.hospitalId = hospitalId;
+        schedule.weekday = weekday;
+        schedule.startTime = startTime;
+        schedule.endTime = endTime;
+        schedule.tokens = tokens;
+        schedule.isDeleted = false;
+        Schedule.collection
+          .insertOne(schedule)
+          .then(res => callback(true, "Schedule created successfully."))
+          .catch(err =>
+            console.log("***** Error creating schedule document. " + err)
+          );
+      }
+    } catch (err) {
+      callback(false, "Unknown error!");
     }
   },
 
@@ -152,22 +161,41 @@ module.exports = {
    * @param {Function} callback
    */
   async createSpecialization(name, iconName, callback) {
-    if (await _isSpecializationExists(name)) {
-      callback(false, "Specialization already exists!");
-    } else {
-      if (utils.isNullOrEmpty(iconName)) {
-        iconName = "general";
+    try {
+      if (await _isSpecializationExists(name)) {
+        callback(false, "Specialization already exists!");
+      } else {
+        if (utils.isNullOrEmpty(iconName)) {
+          iconName = "general";
+        }
+        let specialization = new Specialization();
+        specialization.name = name;
+        specialization.iconName = iconName;
+        Specialization.collection
+          .insertOne(specialization)
+          .then(res => callback(true, "Specialization added successfully."))
+          .catch(err =>
+            console.log("***** Error creating specialization. " + err)
+          );
       }
-      let specialization = new Specialization();
-      specialization.name = name;
-      specialization.iconName = iconName;
-      Specialization.collection
-        .insertOne(specialization)
-        .then(res => callback(true, "Specialization added successfully."))
-        .catch(err =>
-          console.log("***** Error creating specialization. " + err)
-        );
+    } catch (err) {
+      callback(false, "Unknown error!");
     }
+  },
+
+  /**
+   * getSpecializations method fetches all the list of specializations
+   *
+   * @param {Function} callback
+   */
+  getSpecializations(callback) {
+    Specialization.find({}, { _id: 0, iconName: 0 }, (err, specializations) => {
+      if (err) {
+        callback([]);
+      } else {
+        callback(specializations);
+      }
+    });
   },
 
   /**
@@ -218,12 +246,16 @@ module.exports = {
           }
         ],
         async (err, doctors) => {
-          const totalDocuments = await _getUsersCount(userType.DOCTOR);
-          const totalPages = Math.ceil(totalDocuments / limit);
-          if (err) {
+          try {
+            const totalDocuments = await _getUsersCount(userType.DOCTOR);
+            const totalPages = Math.ceil(totalDocuments / limit);
+            if (err) {
+              callback({ status: false, doctors: [], totalPages: null });
+            } else {
+              callback({ status: true, totalPages, doctors });
+            }
+          } catch (err) {
             callback({ status: false, doctors: [], totalPages: null });
-          } else {
-            callback({ status: true, totalPages, doctors });
           }
         }
       );
@@ -257,9 +289,13 @@ module.exports = {
           if (err) {
             callback({ status: false, users: [], totalPages: null });
           } else {
-            const totalDocuments = await _getUsersCount(userType);
-            const totalPages = Math.ceil(totalDocuments / limit);
-            callback({ status: true, totalPages, users });
+            try {
+              const totalDocuments = await _getUsersCount(userType);
+              const totalPages = Math.ceil(totalDocuments / limit);
+              callback({ status: true, totalPages, users });
+            } catch (err) {
+              callback({ status: false, totalPages: 0, users: [] });
+            }
           }
         }
       );
@@ -298,9 +334,13 @@ module.exports = {
           if (err) {
             callback({ status: false, hospitals: [], totalPages: null });
           } else {
-            const totalDocuments = await _getHospitalsCount(location);
-            const totalPages = Math.ceil(totalDocuments / limit);
-            callback({ status: true, totalPages, hospitals });
+            try {
+              const totalDocuments = await _getHospitalsCount(location);
+              const totalPages = Math.ceil(totalDocuments / limit);
+              callback({ status: true, totalPages, hospitals });
+            } catch (err) {
+              callback({ status: true, totalPages: 0, hospitals: [] });
+            }
           }
         }
       );
@@ -314,13 +354,17 @@ module.exports = {
    * @param {Function} callback
    */
   async blockUser(userId, callback) {
-    const updateStatus = await _updateUserStatus(
-      userId,
-      activationStatus.INACTIVE
-    );
-    if (updateStatus) {
-      callback(true);
-    } else {
+    try {
+      const updateStatus = await _updateUserStatus(
+        userId,
+        activationStatus.INACTIVE
+      );
+      if (updateStatus) {
+        callback(true);
+      } else {
+        callback(false);
+      }
+    } catch (err) {
       callback(false);
     }
   },
@@ -332,13 +376,17 @@ module.exports = {
    * @param {String} callback
    */
   async unblockUser(userId, callback) {
-    const updateStatus = await _updateUserStatus(
-      userId,
-      activationStatus.ACTIVE
-    );
-    if (updateStatus) {
-      callback(true);
-    } else {
+    try {
+      const updateStatus = await _updateUserStatus(
+        userId,
+        activationStatus.ACTIVE
+      );
+      if (updateStatus) {
+        callback(true);
+      } else {
+        callback(false);
+      }
+    } catch (err) {
       callback(false);
     }
   },
@@ -570,9 +618,13 @@ module.exports = {
           }
         ],
         async (err, bookings) => {
-          const totalDocuments = await _getBookingHistoryCount();
-          const totalPages = Math.ceil(totalDocuments / limit);
-          callback({ totalPages, bookings });
+          try {
+            const totalDocuments = await _getBookingHistoryCount();
+            const totalPages = Math.ceil(totalDocuments / limit);
+            callback({ totalPages, bookings });
+          } catch (err) {
+            callback({ totalPages: 0, bookings: [] });
+          }
         }
       );
     }
@@ -699,6 +751,243 @@ module.exports = {
           callback({});
         } else {
           callback(booking);
+        }
+      }
+    );
+  },
+
+  /**
+   * getMasterDoctors method fetches all the list of doctors
+   *
+   * @param {Function} callback
+   */
+  getMasterDoctors(callback) {
+    Doctor.aggregate(
+      [
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "doctorDetails"
+          }
+        },
+        {
+          $unwind: "$doctorDetails"
+        },
+        {
+          $project: {
+            userId: 0,
+            yearsOfExperience: 0,
+            degree: 0,
+            profileContent: 0,
+            "doctorDetails._id": 0,
+            "doctorDetails.userType": 0,
+            "doctorDetails.status": 0,
+            "doctorDetails.favorites": 0,
+            "doctorDetails.dateOfBirth": 0,
+            "doctorDetails.gender": 0,
+            "doctorDetails.password": 0,
+            "doctorDetails.profileImage": 0
+          }
+        }
+      ],
+      (err, doctors) => {
+        if (err) {
+          callback([]);
+        } else {
+          let masterData = doctors.map(doctor => {
+            const { _id, specialization, doctorDetails } = doctor;
+            return {
+              doctorId: _id,
+              specialization,
+              name: doctorDetails.fullName,
+              mobile: doctorDetails.username
+            };
+          });
+          callback(masterData);
+        }
+      }
+    );
+  },
+
+  /**
+   * getMasterHospitals method fetches all the list of hospitals.
+   *
+   * @param {Function} callback
+   */
+  getMasterHospitals(callback) {
+    Hospital.find({}, (err, hospitals) => {
+      if (err) {
+        callback([]);
+      } else {
+        let masterData = hospitals.map(hospital => {
+          const { _id, name, address, location, pincode, landmark } = hospital;
+          return {
+            hospitalId: _id,
+            name,
+            address,
+            location,
+            pincode,
+            landmark
+          };
+        });
+        callback(masterData);
+      }
+    });
+  },
+
+  /**
+   * createFrontdeskUser method is used to create a frontdesk user
+   *
+   * @param {Object} userData
+   * @param {Function} callback
+   */
+  async createFrontdeskUser(userData, callback) {
+    try {
+      const isFrontdeskUserExists = await _checkIfFrontdeskUserExists(userData);
+      if (!isFrontdeskUserExists) {
+        const { mobile, fullName, password, doctorId, hospitalId } = userData;
+        //user document
+        let user = new User();
+        user.username = mobile;
+        user.userType = userType.FRONTDESK;
+        user.status = activationStatus.ACTIVE;
+        user.fullName = fullName;
+        user.password = bcrypt.hashSync(
+          password,
+          bcrypt.genSaltSync(passwordConfig.SALT)
+        );
+
+        User.collection
+          .insertOne(user)
+          .then(res => {
+            Schedule.updateMany(
+              {
+                doctorId: mongoose.Types.ObjectId(doctorId),
+                hospitalId: mongoose.Types.ObjectId(hospitalId)
+              },
+              {
+                $set: {
+                  frontdeskUserId: user._id
+                }
+              },
+              (err, raw) => {
+                if (err) {
+                  callback(false, "Unknown err!");
+                } else {
+                  callback(true, "Frontdesk user create successfully.");
+                }
+              }
+            );
+          })
+          .catch(err => console.log("Error creating frontdesk user. " + err));
+      } else {
+        callback(
+          false,
+          "Frontdesk user already exists for the entered combination of doctor and hospital."
+        );
+      }
+    } catch (err) {
+      console.log(err);
+      callback(false, "Unknown error!");
+    }
+  },
+
+  /**
+   * updateFrontdeskUser method updates the frontdesk user for the
+   * given combination of doctorId and hospitalId
+   *
+   * @param {Oject} data
+   */
+  updateFrontdeskUser(data, callback) {
+    const { doctorId, hospitalId, frontdeskUserId } = data;
+    Schedule.updateMany(
+      {
+        doctorId: mongoose.Types.ObjectId(doctorId),
+        hospitalId: mongoose.Types.ObjectId(hospitalId)
+      },
+      {
+        set: {
+          frontdeskUserId: mongoose.Types.ObjectId(frontdeskUserId)
+        }
+      },
+      (err, raw) => {
+        if (err) {
+          console.log(err);
+          callback(false);
+        } else {
+          console.log(
+            "Frontdesk user updated for the combination doctorId: " +
+              doctorId +
+              " and hospitalId: " +
+              hospitalId
+          );
+          console.log(raw);
+          callback(true);
+        }
+      }
+    );
+  },
+
+  /**
+   * getDoctorFrontdeskUsers method is used to fetch the frontdesk user for the given doctorId and hospitalId
+   *
+   * @param {String} doctorId
+   * @param {String} hospitalId
+   * @param {Function} callback
+   */
+  getDoctorFrontdeskUsers(doctorId, hospitalId, callback) {
+    Schedule.aggregate(
+      [
+        {
+          $match: {
+            doctorId: mongoose.Types.ObjectId(doctorId),
+            hospitalId: mongoose.Types.ObjectId(hospitalId)
+          }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "frontdeskUserId",
+            foreignField: "_id",
+            as: "userDetails"
+          }
+        },
+        {
+          $unwind: "$userDetails"
+        },
+        {
+          $limit: 1
+        },
+        {
+          $project: {
+            _id: 0,
+            doctorId: 0,
+            hospitalId: 0,
+            tokens: 0,
+            weekday: 0,
+            startTime: 0,
+            endTime: 0,
+            isDeleted: 0,
+            frontdeskUserId: 0,
+            "userDetails.userType": 0,
+            "userDetails.status": 0,
+            "userDetails.password": 0,
+            "userDetails.favorites": 0
+          }
+        }
+      ],
+      (err, user) => {
+        if (err) {
+          callback({});
+        } else {
+          if (!utils.isNullOrEmpty(user)) {
+            const { _id, username, fullName } = user[0].userDetails;
+            callback({ userId: _id, mobile: username, fullName });
+          } else {
+            callback({});
+          }
         }
       }
     );
@@ -849,5 +1138,36 @@ function _updateUserStatus(userId, status) {
 function _findTokenIndex(tokens, tokenNumber) {
   return tokens.findIndex(token => {
     return utils.isEqual(token.number, parseInt(tokenNumber));
+  });
+}
+
+/**
+ * _checkIfFrontdeskUserExists method check if a frontdesk user exists already
+ * for the given combination of doctor and hospital.
+ *
+ * @param {Object} userData
+ */
+function _checkIfFrontdeskUserExists(userData) {
+  const { doctorId, hospitalId } = userData;
+  return new Promise((resolve, reject) => {
+    Schedule.find(
+      {
+        doctorId: mongoose.Types.ObjectId(doctorId),
+        hospitalId: mongoose.Types.ObjectId(hospitalId)
+      },
+      (err, schedules) => {
+        if (err) {
+          reject(err);
+        } else {
+          if (utils.isNullOrEmpty(schedules)) {
+            //combination does not exists
+            resolve(false);
+          } else {
+            //combination exists
+            resolve(true);
+          }
+        }
+      }
+    );
   });
 }

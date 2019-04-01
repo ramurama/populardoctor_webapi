@@ -1,22 +1,34 @@
 const passport = require("passport");
 const routes = require("../constants/routes");
 const customerService = require("../services/customerService");
+const settingsService = require("../services/settingsService");
 
 module.exports = app => {
   app.get(
-    routes.GET_SEARCH_CRITERIA,
+    routes.GET_INITIAL_DATA,
     passport.authenticate("jwt", { session: false }),
     (req, res) => {
       const specializations = customerService.getSpecializations();
       const locations = customerService.getLocations();
       const favorites = customerService.getFavorites(req.user.username);
-      Promise.all([specializations, locations, favorites]).then(data => {
-        res.send({
-          specializations: data[0],
-          locations: data[1],
-          favorites: data[2]
+      const support = settingsService.getSupportDetails();
+      Promise.all([specializations, locations, favorites, support])
+        .then(data => {
+          res.send({
+            specializations: data[0],
+            locations: data[1],
+            favorites: data[2],
+            support: data[3]
+          });
+        })
+        .catch(err => {
+          res.send({
+            specializations: [],
+            locations: [],
+            favorites: [],
+            support: {}
+          });
         });
-      });
     }
   );
 

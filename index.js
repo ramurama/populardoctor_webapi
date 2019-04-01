@@ -17,6 +17,8 @@ require("./v1/models/Schedule");
 require("./v1/models/TokenTable");
 require("./v1/models/Booking");
 require("./v1/models/AutoNumber");
+require("./v1/models/UserSupport");
+require("./v1/models/Announcement");
 
 //v1 services
 require("./v1/services/passport");
@@ -24,6 +26,7 @@ require("./v1/services/settingsService");
 require("./v1/services/customerService");
 require("./v1/services/adminService");
 require("./v1/services/doctorService");
+require("./v1/services/frontdeskService");
 
 //v1 routers
 const authRouterV1 = require("./v1/routers/authRouter");
@@ -32,6 +35,7 @@ const notificationRouterV1 = require("./v1/routers/notificationRouter");
 const customerRouterV1 = require("./v1/routers/customerRouter");
 const adminRouterV1 = require("./v1/routers/adminRouter");
 const doctorRouterV1 = require("./v1/routers/doctorRouter");
+const frontdeskRouterV1 = require("./v1/routers/frontdeskRouter");
 
 mongoose.connect(keys.mongoURI, { useNewUrlParser: true });
 
@@ -53,6 +57,7 @@ notificationRouterV1(app);
 customerRouterV1(app);
 adminRouterV1(app);
 doctorRouterV1(app);
+frontdeskRouterV1(app);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT);

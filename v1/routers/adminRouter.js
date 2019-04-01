@@ -103,4 +103,44 @@ module.exports = app => {
       });
     }
   );
+
+  app.get(routes.GET_SPECIALIZATIONS, (req, res) => {
+    adminService.getSpecializations(specializations =>
+      res.send(specializations)
+    );
+  });
+
+  app.get(routes.GET_MASTER_DOCTORS, (req, res) => {
+    adminService.getMasterDoctors(doctors => {
+      res.send(doctors);
+    });
+  });
+
+  app.get(routes.GET_MASTER_HOSPITALS, (req, res) => {
+    adminService.getMasterHospitals(hospitals => {
+      res.send(hospitals);
+    });
+  });
+
+  app.post(routes.CREATE_FRONTDESK_USER, (req, res) => {
+    adminService.createFrontdeskUser(req.body, (status, message) => {
+      res.send({ status, message });
+    });
+  });
+
+  app.get(
+    routes.GET_DR_FRONTDESK_USER + "/:doctorId/:hospitalId",
+    (req, res) => {
+      const { doctorId, hospitalId } = req.params;
+      adminService.getDoctorFrontdeskUsers(doctorId, hospitalId, user => {
+        res.send(user);
+      });
+    }
+  );
+
+  app.put(routes.UPDATE_FRONTDESK_USER, (req, res) => {
+    adminService.updateFrontdeskUser(req.body, status => {
+      res.send({ status });
+    });
+  });
 };

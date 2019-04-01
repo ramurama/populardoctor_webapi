@@ -9,5 +9,8 @@ module.exports = {
   TOKEN_TABLE: "token_tables",
   BOOKING: "bookings",
   AUTO_NUMBER: "auto_numbers",
-  BOOKING_OTP: "booking_otps"
+  BOOKING_OTP: "booking_otps",
+  USER_SUPPORT: "user_supports",
+  FRONTDESK_USER: "frontdesk_users",
+  ANNOUNCEMENTS: "announcements"
 };

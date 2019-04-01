@@ -23,7 +23,8 @@ const userSchema = new Schema({
   status: {
     type: "String",
     enum: [activationStatus.ACTIVE, activationStatus.INACTIVE],
-    default: activationStatus.INACTIVE
+    default: activationStatus.INACTIVE,
+    required: true
   },
   fullName: {
     type: "String",
@@ -31,7 +32,7 @@ const userSchema = new Schema({
   },
   dateOfBirth: {
     type: Date,
-    required: true
+    required: false
   },
   gender: {
     type: "String",

@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const modelnames = require("../constants/modelNames");
 const User = mongoose.model(modelnames.USERS);
 const MobileOtp = mongoose.model(modelnames.MOBILE_OTP);
+const Announcement = mongoose.model(modelnames.ANNOUNCEMENTS);
 const firebaseTopics = require("../constants/firebaseTopics");
 const utils = require("../utils");
 
@@ -82,6 +83,8 @@ module.exports = {
       .messaging()
       .send(message)
       .then(res => {
+        //save announcement document
+        _saveAnnouncementData(title, body);
         console.log("Successfully sent message:", res);
       })
       .catch(error => {
@@ -91,7 +94,7 @@ module.exports = {
 
   /**
    * sendOtpByUserMobileNumber is used to send OTP via SMS services.
-   * 
+   *
    * @param {string} mobile
    * @param {Function} callback
    */
@@ -118,9 +121,24 @@ module.exports = {
           .catch(err => console.log("***** Error updating OTP data." + err));
       }
     });
-    
+
     //sms api call
 
     callback(true);
   }
 };
+
+/**
+ * _saveAnnouncementData method is used to save all the announcements made.
+ *
+ * @param {String} title
+ * @param {String} body
+ */
+function _saveAnnouncementData(title, body) {
+  Announcement.collection
+    .insertOne({ title, body, date: new Date() })
+    .then(res => {
+      console.log("Announcement document added");
+    })
+    .catch(err => console.log(err));
+}

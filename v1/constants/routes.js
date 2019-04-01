@@ -11,6 +11,8 @@ module.exports = {
   SIGNUP_CUSTOMER: "/api/v1/customer/signup",
   USER_VERIFY_OTP: "/api/v1/user/verifyOtp",
   IS_MOBILE_NUMBER_EXISTS: "/api/v1/user/isMobileNumberExists",
+  GET_SUPPORT_DETAILS: "/api/v1/user/getSupportDetails",
+  RESET_PASSWORD: "/api/v1/user/resetPassword",
 
   SEND_OTP: "/api/v1/messages/sendOtp",
   SEND_PUSH: "/api/v1/messages/push/",
@@ -21,10 +23,14 @@ module.exports = {
   CREATE_DOCTOR: "/api/v1/admin/createDoctor",
   CREATE_HOSPITAL: "/api/v1/admin/createHospital",
   CREATE_SCHEDULE: "/api/v1/admin/createSchedule",
+  CREATE_FRONTDESK_USER: "/api/v1/admin/createFrontdeskUser",
+  GET_DR_FRONTDESK_USER: "/api/v1/admin/getDoctorFrontdeskUser",
   GET_DOCTORS: "/api/v1/admin/getDoctors",
   GET_CUSTOMERS: "/api/v1/admin/getCustomers",
   GET_FRONTDESK_USERS: "/api/v1/admin/getFrontdeskUsers",
   GET_HOSPITALS: "/api/v1/admin/getHospitals",
+  GET_MASTER_DOCTORS: "/api/v1/admin/getMasterDoctors",
+  GET_MASTER_HOSPITALS: "/api/v1/admin/getMasterHospitals",
   BLOCK_USER: "/api/v1/admin/blockUser",
   UNBLOCK_USER: "/api/v1/admin/unblockUser",
   DELETE_SCHEDULE: "/api/v1/admin/deleteSchedule",
@@ -32,9 +38,11 @@ module.exports = {
   ADD_TOKEN: "/api/v1/admin/addToken",
   GET_BOOKING_HISTORY_ADMIN: "/api/v1/admin/getBookingHistory",
   GET_BOOKING_HISTORY_DETAIL_ADMIN: "/api/v1/admin/getBookingHistoryDetail",
+  GET_SPECIALIZATIONS: "/api/v1/admin/getSpecializations",
+  UPDATE_FRONTDESK_USER: "/api/v1/admin/updateFrontdeskUser",
 
   //customer
-  GET_SEARCH_CRITERIA: "/api/v1/customer/getSearchCriteria",
+  GET_INITIAL_DATA: "/api/v1/customer/getInitialData",
   ADD_FAVORITE: "/api/v1/customer/addFavorite",
   REMOVE_FAVORITE: "/api/v1/customer/removeFavorite",
   GET_FAVORITES: "/api/v1/customer/getFavorites",
@@ -47,5 +55,22 @@ module.exports = {
 
   //doctor
   GET_NEXT_DAY_SCHEDULE_CONFIRMATIONS: "/api/v1/doctor/getNextDayConfirmations",
-  CONFIRM_SCHEDULE: "/api/v1/doctor/confirmSchedule"
+  CONFIRM_SCHEDULE: "/api/v1/doctor/confirmSchedule",
+  GET_BOOKING_HISTORY_DR: "/api/v1/doctor/getBookingHistory",
+  GET_TODAYS_BOOKINGS: "/api/v1/doctor/getTodaysBookings",
+  GET_QR_BOOKING_DETAIL: "/api/v1/doctor/getBookingDetail",
+  CONFIRM_VISITING: "/api/v1/doctor/confirmVisit",
+  VERIFY_BOOKING_OTP: "/api/v1/doctor/verifyBookingOtp",
+  GET_BOOKING_STATUS: "/api/v1/doctor/getBookingStatus",
+  GET_CONFIRMED_SCHEDULES_DR: "/api/v1/doctor/getConfirmedSchedules",
+  BLOCK_SCHEDULE_DR: "/api/v1/doctor/blockSchedule",
+
+  //frontdesk
+  GET_FD_TODAYS_BOOKINGS: "/api/v1/frontdesk/getTodaysBookings",
+  GET_FD_QR_BOOKING_DETAIL: "/api/v1/frontdesk/getBookingDetail",
+  CONFIRM_VISITING_FD: "/api/v1/frontdesk/confirmVisit",
+  VERIFY_BOOKING_OTP_FD: "/api/v1/frontdesk/verifyBookingOtp",
+  GET_FD_BOOKING_STATUS: "/api/v1/frontdesk/getBookingStatus",
+  GET_CONFIRMED_SCHEDULES_FD: "/api/v1/frontdesk/getConfirmedSchedules",
+  BLOCK_SCHEDULE_FD: "/api/v1/frontdesk/blockSchedule"
 };

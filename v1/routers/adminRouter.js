@@ -123,8 +123,8 @@ module.exports = app => {
   });
 
   app.post(routes.CREATE_FRONTDESK_USER, (req, res) => {
-    adminService.createFrontdeskUser(req.body, status => {
-      res.send({ status });
+    adminService.createFrontdeskUser(req.body, (status, message) => {
+      res.send({ status, message });
     });
   });
 

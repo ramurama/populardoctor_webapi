@@ -843,42 +843,55 @@ module.exports = {
    * @param {Object} userData
    * @param {Function} callback
    */
-  createFrontdeskUser(userData, callback) {
-    const { mobile, fullName, password, doctorId, hospitalId } = userData;
-    //user document
-    let user = new User();
-    user.username = mobile;
-    user.userType = userType.FRONTDESK;
-    user.status = activationStatus.ACTIVE;
-    user.fullName = fullName;
-    user.password = bcrypt.hashSync(
-      password,
-      bcrypt.genSaltSync(passwordConfig.SALT)
-    );
-
-    User.collection
-      .insertOne(user)
-      .then(res => {
-        Schedule.updateMany(
-          {
-            doctorId: mongoose.Types.ObjectId(doctorId),
-            hospitalId: mongoose.Types.ObjectId(hospitalId)
-          },
-          {
-            $set: {
-              frontdeskUserId: user._id
-            }
-          },
-          (err, raw) => {
-            if (err) {
-              callback(false);
-            } else {
-              callback(true);
-            }
-          }
+  async createFrontdeskUser(userData, callback) {
+    try {
+      const isFrontdeskUserExists = await _checkIfFrontdeskUserExists(userData);
+      if (!isFrontdeskUserExists) {
+        const { mobile, fullName, password, doctorId, hospitalId } = userData;
+        //user document
+        let user = new User();
+        user.username = mobile;
+        user.userType = userType.FRONTDESK;
+        user.status = activationStatus.ACTIVE;
+        user.fullName = fullName;
+        user.password = bcrypt.hashSync(
+          password,
+          bcrypt.genSaltSync(passwordConfig.SALT)
         );
-      })
-      .catch(err => console.log("Error creating frontdesk user. " + err));
+
+        User.collection
+          .insertOne(user)
+          .then(res => {
+            Schedule.updateMany(
+              {
+                doctorId: mongoose.Types.ObjectId(doctorId),
+                hospitalId: mongoose.Types.ObjectId(hospitalId)
+              },
+              {
+                $set: {
+                  frontdeskUserId: user._id
+                }
+              },
+              (err, raw) => {
+                if (err) {
+                  callback(false, "Unknown err!");
+                } else {
+                  callback(true, "Frontdesk user create successfully.");
+                }
+              }
+            );
+          })
+          .catch(err => console.log("Error creating frontdesk user. " + err));
+      } else {
+        callback(
+          false,
+          "Frontdesk user already exists for the entered combination of doctor and hospital."
+        );
+      }
+    } catch (err) {
+      console.log(err);
+      callback(false, "Unknown error!");
+    }
   },
 
   /**
@@ -1089,5 +1102,31 @@ function _updateUserStatus(userId, status) {
 function _findTokenIndex(tokens, tokenNumber) {
   return tokens.findIndex(token => {
     return utils.isEqual(token.number, parseInt(tokenNumber));
+  });
+}
+
+function _checkIfFrontdeskUserExists(userData) {
+  const { mobile, fullName, password, doctorId, hospitalId } = userData;
+
+  return new Promise((resolve, reject) => {
+    Schedule.find(
+      {
+        doctorId: mongoose.Types.ObjectId(doctorId),
+        hospitalId: mongoose.Types.ObjectId(hospitalId)
+      },
+      (err, schedules) => {
+        if (err) {
+          reject(err);
+        } else {
+          if (utils.isNullOrEmpty(schedules)) {
+            //combination does not exists
+            resolve(false);
+          } else {
+            //combination exists
+            resolve(true);
+          }
+        }
+      }
+    );
   });
 }

@@ -137,4 +137,10 @@ module.exports = app => {
       });
     }
   );
+
+  app.put(routes.UPDATE_FRONTDESK_USER, (req, res) => {
+    adminService.updateFrontdeskUser(req.body, status => {
+      res.send({ status });
+    });
+  });
 };

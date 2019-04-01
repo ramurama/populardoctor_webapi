@@ -895,6 +895,42 @@ module.exports = {
   },
 
   /**
+   * updateFrontdeskUser method updates the frontdesk user for the
+   * given combination of doctorId and hospitalId
+   *
+   * @param {Oject} data
+   */
+  updateFrontdeskUser(data, callback) {
+    const { doctorId, hospitalId, frontdeskUserId } = data;
+    Schedule.updateMany(
+      {
+        doctorId: mongoose.Types.ObjectId(doctorId),
+        hospitalId: mongoose.Types.ObjectId(hospitalId)
+      },
+      {
+        set: {
+          frontdeskUserId: mongoose.Types.ObjectId(frontdeskUserId)
+        }
+      },
+      (err, raw) => {
+        if (err) {
+          console.log(err);
+          callback(false);
+        } else {
+          console.log(
+            "Frontdesk user updated for the combination doctorId: " +
+              doctorId +
+              " and hospitalId: " +
+              hospitalId
+          );
+          console.log(raw);
+          callback(true);
+        }
+      }
+    );
+  },
+
+  /**
    * getDoctorFrontdeskUsers method is used to fetch the frontdesk user for the given doctorId and hospitalId
    *
    * @param {String} doctorId

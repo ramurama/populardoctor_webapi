@@ -1105,9 +1105,14 @@ function _findTokenIndex(tokens, tokenNumber) {
   });
 }
 
+/**
+ * _checkIfFrontdeskUserExists method check if a frontdesk user exists already
+ * for the given combination of doctor and hospital.
+ *
+ * @param {Object} userData
+ */
 function _checkIfFrontdeskUserExists(userData) {
-  const { mobile, fullName, password, doctorId, hospitalId } = userData;
-
+  const { doctorId, hospitalId } = userData;
   return new Promise((resolve, reject) => {
     Schedule.find(
       {

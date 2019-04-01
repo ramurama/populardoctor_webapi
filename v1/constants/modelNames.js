@@ -11,5 +11,6 @@ module.exports = {
   AUTO_NUMBER: "auto_numbers",
   BOOKING_OTP: "booking_otps",
   USER_SUPPORT: "user_supports",
-  FRONTDESK_USER: "frontdesk_users"
+  FRONTDESK_USER: "frontdesk_users",
+  ANNOUNCEMENTS: "announcements"
 };

@@ -43,13 +43,22 @@ module.exports = {
    */
   getLocations() {
     return new Promise((resolve, reject) => {
-      Location.find({}, (err, locationList) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(locationList);
+      Location.find(
+        {},
+        {},
+        {
+          sort: {
+            name: 1
+          }
+        },
+        (err, locationList) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(locationList);
+          }
         }
-      });
+      );
     });
   },
 

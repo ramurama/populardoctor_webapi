@@ -247,15 +247,25 @@ module.exports = {
         ],
         async (err, doctors) => {
           try {
-            const totalDocuments = await _getUsersCount(userType.DOCTOR);
-            const totalPages = Math.ceil(totalDocuments / limit);
+            const totalRecords = await _getUsersCount(userType.DOCTOR);
+            const totalPages = Math.ceil(totalRecords / limit);
             if (err) {
-              callback({ status: false, doctors: [], totalPages: null });
+              callback({
+                status: false,
+                doctors: [],
+                totalRecords: 0,
+                totalPages: null
+              });
             } else {
-              callback({ status: true, totalPages, doctors });
+              callback({ status: true, totalPages, totalRecords, doctors });
             }
           } catch (err) {
-            callback({ status: false, doctors: [], totalPages: null });
+            callback({
+              status: false,
+              doctors: [],
+              totalRecords: 0,
+              totalPages: null
+            });
           }
         }
       );
@@ -287,14 +297,24 @@ module.exports = {
         },
         async (err, users) => {
           if (err) {
-            callback({ status: false, users: [], totalPages: null });
+            callback({
+              status: false,
+              users: [],
+              totalPages: null,
+              totalRecords: 0
+            });
           } else {
             try {
-              const totalDocuments = await _getUsersCount(userType);
-              const totalPages = Math.ceil(totalDocuments / limit);
-              callback({ status: true, totalPages, users });
+              const totalRecords = await _getUsersCount(userType);
+              const totalPages = Math.ceil(totalRecords / limit);
+              callback({ status: true, totalPages, totalRecords, users });
             } catch (err) {
-              callback({ status: false, totalPages: 0, users: [] });
+              callback({
+                status: false,
+                totalPages: 0,
+                users: [],
+                totalRecords: 0
+              });
             }
           }
         }
@@ -332,14 +352,24 @@ module.exports = {
         },
         async (err, hospitals) => {
           if (err) {
-            callback({ status: false, hospitals: [], totalPages: null });
+            callback({
+              status: false,
+              hospitals: [],
+              totalPages: null,
+              totalRecords: 0
+            });
           } else {
             try {
-              const totalDocuments = await _getHospitalsCount(location);
-              const totalPages = Math.ceil(totalDocuments / limit);
-              callback({ status: true, totalPages, hospitals });
+              const totalRecords = await _getHospitalsCount(location);
+              const totalPages = Math.ceil(totalRecords / limit);
+              callback({ status: true, totalPages, totalRecords, hospitals });
             } catch (err) {
-              callback({ status: true, totalPages: 0, hospitals: [] });
+              callback({
+                status: true,
+                totalPages: 0,
+                hospitals: [],
+                totalRecords: 0
+              });
             }
           }
         }
@@ -619,11 +649,11 @@ module.exports = {
         ],
         async (err, bookings) => {
           try {
-            const totalDocuments = await _getBookingHistoryCount();
-            const totalPages = Math.ceil(totalDocuments / limit);
-            callback({ totalPages, bookings });
+            const totalRecords = await _getBookingHistoryCount();
+            const totalPages = Math.ceil(totalRecords / limit);
+            callback({ totalPages, totalRecords, bookings });
           } catch (err) {
-            callback({ totalPages: 0, bookings: [] });
+            callback({ totalPages: 0, bookings: [], totalRecords: 0 });
           }
         }
       );

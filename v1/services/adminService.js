@@ -31,7 +31,8 @@ module.exports = {
       specialization,
       yearsOfExperience,
       degree,
-      profileImage
+      profileImage,
+      profileContent
     } = doctorData;
 
     //user document
@@ -57,6 +58,7 @@ module.exports = {
         doctor.specialization = specialization;
         doctor.yearsOfExperience = yearsOfExperience;
         doctor.degree = degree;
+        doctor.profileContent = profileContent;
         Doctor.collection
           .save(doctor)
           .then(res => callback(true))
@@ -938,7 +940,7 @@ module.exports = {
         hospitalId: mongoose.Types.ObjectId(hospitalId)
       },
       {
-        set: {
+        $set: {
           frontdeskUserId: mongoose.Types.ObjectId(frontdeskUserId)
         }
       },
@@ -1018,6 +1020,97 @@ module.exports = {
           } else {
             callback({});
           }
+        }
+      }
+    );
+  },
+
+  /**
+   * updateDoctor method is used to update the doctor and doctor's user document for the given doctorId
+   *
+   * @param {String} doctorId
+   * @param {Object} data
+   * @param {Function} callback
+   */
+  updateDoctor(doctorId, data, callback) {
+    const {
+      fullName,
+      dateOfBirth,
+      specialization,
+      yearsOfExperience,
+      gender,
+      profileImage,
+      degree,
+      profileContent
+    } = data;
+
+    Doctor.findOneAndUpdate(
+      { _id: mongoose.Types.ObjectId(doctorId) },
+      {
+        $set: {
+          specialization,
+          yearsOfExperience,
+          degree,
+          profileContent
+        }
+      },
+      {
+        new: true
+      },
+      (err, doctor) => {
+        User.updateOne(
+          { _id: doctor.userId },
+          {
+            $set: {
+              fullName,
+              dateOfBirth,
+              gender,
+              profileImage
+            }
+          },
+          (err, raw) => {
+            if (err) {
+              console.log(err);
+              callback(false);
+            } else {
+              console.log(raw);
+              console.log("Doctor details update successfully.");
+              callback(true);
+            }
+          }
+        );
+      }
+    );
+  },
+
+  /**
+   * updateHospital method id used to update the name, address, pincode and landmark of a hospital
+   *
+   * @param {String} hospitalId
+   * @param {Object} data
+   * @param {Function} callback
+   */
+  updateHospital(hospitalId, data, callback) {
+    const { name, address, pincode, landmark } = data;
+
+    Hospital.updateOne(
+      { _id: mongoose.Types.ObjectId(hospitalId) },
+      {
+        $set: {
+          name,
+          address,
+          pincode,
+          landmark
+        }
+      },
+      (err, raw) => {
+        if (err) {
+          console.log(err);
+          callback(false);
+        } else {
+          console.log("Hospital details updated successfully.");
+          console.log(raw);
+          callback(true);
         }
       }
     );

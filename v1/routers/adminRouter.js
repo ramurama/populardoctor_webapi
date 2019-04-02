@@ -143,4 +143,18 @@ module.exports = app => {
       res.send({ status });
     });
   });
+
+  app.put(routes.UPDATE_DOCTOR + "/:doctorId", (req, res) => {
+    const { doctorId } = req.params;
+    adminService.updateDoctor(doctorId, req.body, status => {
+      res.send({ status });
+    });
+  });
+
+  app.put(routes.UPDATE_HOSPITAL + "/:hospitalId", (req, res) => {
+    const { hospitalId } = req.params;
+    adminService.updateHospital(hospitalId, req.body, status => {
+      res.send({ status });
+    });
+  });
 };

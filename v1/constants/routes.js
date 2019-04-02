@@ -40,6 +40,8 @@ module.exports = {
   GET_BOOKING_HISTORY_DETAIL_ADMIN: "/api/v1/admin/getBookingHistoryDetail",
   GET_SPECIALIZATIONS: "/api/v1/admin/getSpecializations",
   UPDATE_FRONTDESK_USER: "/api/v1/admin/updateFrontdeskUser",
+  UPDATE_DOCTOR: "/api/v1/admin/updateDoctor",
+  UPDATE_HOSPITAL: "/api/v1/admin/updateHospital",
 
   //customer
   GET_INITIAL_DATA: "/api/v1/customer/getInitialData",

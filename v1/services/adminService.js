@@ -31,7 +31,8 @@ module.exports = {
       specialization,
       yearsOfExperience,
       degree,
-      profileImage
+      profileImage,
+      profileContent
     } = doctorData;
 
     //user document
@@ -57,6 +58,7 @@ module.exports = {
         doctor.specialization = specialization;
         doctor.yearsOfExperience = yearsOfExperience;
         doctor.degree = degree;
+        doctor.profileContent = profileContent;
         Doctor.collection
           .save(doctor)
           .then(res => callback(true))
@@ -247,15 +249,25 @@ module.exports = {
         ],
         async (err, doctors) => {
           try {
-            const totalDocuments = await _getUsersCount(userType.DOCTOR);
-            const totalPages = Math.ceil(totalDocuments / limit);
+            const totalRecords = await _getUsersCount(userType.DOCTOR);
+            const totalPages = Math.ceil(totalRecords / limit);
             if (err) {
-              callback({ status: false, doctors: [], totalPages: null });
+              callback({
+                status: false,
+                doctors: [],
+                totalRecords: 0,
+                totalPages: null
+              });
             } else {
-              callback({ status: true, totalPages, doctors });
+              callback({ status: true, totalPages, totalRecords, doctors });
             }
           } catch (err) {
-            callback({ status: false, doctors: [], totalPages: null });
+            callback({
+              status: false,
+              doctors: [],
+              totalRecords: 0,
+              totalPages: null
+            });
           }
         }
       );
@@ -287,14 +299,24 @@ module.exports = {
         },
         async (err, users) => {
           if (err) {
-            callback({ status: false, users: [], totalPages: null });
+            callback({
+              status: false,
+              users: [],
+              totalPages: null,
+              totalRecords: 0
+            });
           } else {
             try {
-              const totalDocuments = await _getUsersCount(userType);
-              const totalPages = Math.ceil(totalDocuments / limit);
-              callback({ status: true, totalPages, users });
+              const totalRecords = await _getUsersCount(userType);
+              const totalPages = Math.ceil(totalRecords / limit);
+              callback({ status: true, totalPages, totalRecords, users });
             } catch (err) {
-              callback({ status: false, totalPages: 0, users: [] });
+              callback({
+                status: false,
+                totalPages: 0,
+                users: [],
+                totalRecords: 0
+              });
             }
           }
         }
@@ -332,14 +354,24 @@ module.exports = {
         },
         async (err, hospitals) => {
           if (err) {
-            callback({ status: false, hospitals: [], totalPages: null });
+            callback({
+              status: false,
+              hospitals: [],
+              totalPages: null,
+              totalRecords: 0
+            });
           } else {
             try {
-              const totalDocuments = await _getHospitalsCount(location);
-              const totalPages = Math.ceil(totalDocuments / limit);
-              callback({ status: true, totalPages, hospitals });
+              const totalRecords = await _getHospitalsCount(location);
+              const totalPages = Math.ceil(totalRecords / limit);
+              callback({ status: true, totalPages, totalRecords, hospitals });
             } catch (err) {
-              callback({ status: true, totalPages: 0, hospitals: [] });
+              callback({
+                status: true,
+                totalPages: 0,
+                hospitals: [],
+                totalRecords: 0
+              });
             }
           }
         }
@@ -619,11 +651,11 @@ module.exports = {
         ],
         async (err, bookings) => {
           try {
-            const totalDocuments = await _getBookingHistoryCount();
-            const totalPages = Math.ceil(totalDocuments / limit);
-            callback({ totalPages, bookings });
+            const totalRecords = await _getBookingHistoryCount();
+            const totalPages = Math.ceil(totalRecords / limit);
+            callback({ totalPages, totalRecords, bookings });
           } catch (err) {
-            callback({ totalPages: 0, bookings: [] });
+            callback({ totalPages: 0, bookings: [], totalRecords: 0 });
           }
         }
       );
@@ -908,7 +940,7 @@ module.exports = {
         hospitalId: mongoose.Types.ObjectId(hospitalId)
       },
       {
-        set: {
+        $set: {
           frontdeskUserId: mongoose.Types.ObjectId(frontdeskUserId)
         }
       },
@@ -988,6 +1020,97 @@ module.exports = {
           } else {
             callback({});
           }
+        }
+      }
+    );
+  },
+
+  /**
+   * updateDoctor method is used to update the doctor and doctor's user document for the given doctorId
+   *
+   * @param {String} doctorId
+   * @param {Object} data
+   * @param {Function} callback
+   */
+  updateDoctor(doctorId, data, callback) {
+    const {
+      fullName,
+      dateOfBirth,
+      specialization,
+      yearsOfExperience,
+      gender,
+      profileImage,
+      degree,
+      profileContent
+    } = data;
+
+    Doctor.findOneAndUpdate(
+      { _id: mongoose.Types.ObjectId(doctorId) },
+      {
+        $set: {
+          specialization,
+          yearsOfExperience,
+          degree,
+          profileContent
+        }
+      },
+      {
+        new: true
+      },
+      (err, doctor) => {
+        User.updateOne(
+          { _id: doctor.userId },
+          {
+            $set: {
+              fullName,
+              dateOfBirth,
+              gender,
+              profileImage
+            }
+          },
+          (err, raw) => {
+            if (err) {
+              console.log(err);
+              callback(false);
+            } else {
+              console.log(raw);
+              console.log("Doctor details update successfully.");
+              callback(true);
+            }
+          }
+        );
+      }
+    );
+  },
+
+  /**
+   * updateHospital method id used to update the name, address, pincode and landmark of a hospital
+   *
+   * @param {String} hospitalId
+   * @param {Object} data
+   * @param {Function} callback
+   */
+  updateHospital(hospitalId, data, callback) {
+    const { name, address, pincode, landmark } = data;
+
+    Hospital.updateOne(
+      { _id: mongoose.Types.ObjectId(hospitalId) },
+      {
+        $set: {
+          name,
+          address,
+          pincode,
+          landmark
+        }
+      },
+      (err, raw) => {
+        if (err) {
+          console.log(err);
+          callback(false);
+        } else {
+          console.log("Hospital details updated successfully.");
+          console.log(raw);
+          callback(true);
         }
       }
     );

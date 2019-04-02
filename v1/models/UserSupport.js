@@ -6,6 +6,10 @@ const userSupportsSchema = new Schema({
   contact_number: {
     type: "string",
     required: true
+  },
+  contact_email: {
+    type: "string",
+    required: true
   }
 });
 

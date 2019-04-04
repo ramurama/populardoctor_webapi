@@ -42,6 +42,8 @@ module.exports = {
   UPDATE_FRONTDESK_USER: "/api/v1/admin/updateFrontdeskUser",
   UPDATE_DOCTOR: "/api/v1/admin/updateDoctor",
   UPDATE_HOSPITAL: "/api/v1/admin/updateHospital",
+  GET_SCHEDULES: "/api/v1/admin/getSchedules",
+  GET_SCHEDULE_DETAILS: "/api/v1/admin/getScheduleDetails",
 
   //customer
   GET_INITIAL_DATA: "/api/v1/customer/getInitialData",

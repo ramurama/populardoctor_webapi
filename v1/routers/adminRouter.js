@@ -157,4 +157,18 @@ module.exports = app => {
       res.send({ status });
     });
   });
+
+  app.get(routes.GET_SCHEDULES + "/:doctorId", (req, res) => {
+    const { doctorId } = req.params;
+    adminService.getSchedules(doctorId, schedules => {
+      res.send(schedules);
+    });
+  });
+
+  app.get(routes.GET_SCHEDULE_DETAILS + "/:scheduleId", (req, res) => {
+    const { scheduleId } = req.params;
+    adminService.getScheduleDetails(scheduleId, schedule => {
+      res.send(schedule);
+    });
+  });
 };

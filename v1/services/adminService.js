@@ -156,6 +156,110 @@ module.exports = {
   },
 
   /**
+   * getSchedules method is used to get all the schedules for a given doctorId
+   *
+   * @param {String} doctorId
+   * @param {Function} callback
+   */
+  getSchedules(doctorId, callback) {
+    Schedule.aggregate(
+      [
+        {
+          $match: {
+            doctorId: mongoose.Types.ObjectId(doctorId),
+            isDeleted: false
+          }
+        },
+        {
+          $lookup: {
+            from: "hospitals",
+            localField: "hospitalId",
+            foreignField: "_id",
+            as: "hospital"
+          }
+        },
+        {
+          $unwind: "$hospital"
+        },
+        {
+          $project: {
+            doctorId: 0,
+            isDeleted: 0,
+            tokens: 0,
+            "hospital._id": 0
+          }
+        },
+        {
+          $sort: {
+            weekday: 1
+          }
+        }
+      ],
+      (err, schedules) => {
+        if (err) {
+          callback([]);
+        } else {
+          callback(schedules);
+        }
+      }
+    );
+  },
+
+  /**
+   * getScheduleDetails method is used to get complete schedule details for the given scheduleId
+   *
+   * @param {String} scheduleId
+   * @param {Function} callback
+   */
+  getScheduleDetails(scheduleId, callback) {
+    Schedule.aggregate(
+      [
+        {
+          $match: {
+            _id: mongoose.Types.ObjectId(scheduleId)
+          }
+        },
+        {
+          $lookup: {
+            from: "hospitals",
+            localField: "hospitalId",
+            foreignField: "_id",
+            as: "hospital"
+          }
+        },
+        {
+          $lookup: {
+            from: "doctors",
+            localField: "doctorId",
+            foreignField: "_id",
+            as: "doctorDetails"
+          }
+        },
+        {
+          $unwind: "$doctorDetails"
+        },
+        {
+          $unwind: "$hospital"
+        },
+        {
+          $project: {
+            doctorId: 0,
+            isDeleted: 0,
+            "hospital._id": 0
+          }
+        }
+      ],
+      (err, schedules) => {
+        if (err) {
+          callback({});
+        } else {
+          callback(schedules[0]);
+        }
+      }
+    );
+  },
+
+  /**
    * createSpecialization method is used to create specialization.
    *
    * @param {String} name

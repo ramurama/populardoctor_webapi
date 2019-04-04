@@ -242,10 +242,37 @@ module.exports = {
           $unwind: "$hospital"
         },
         {
+          $lookup: {
+            from: "users",
+            localField: "doctorDetails.userId",
+            foreignField: "_id",
+            as: "doctorUserDetails"
+          }
+        },
+        {
+          $unwind: "$doctorUserDetails"
+        },
+        {
+          $addFields: {
+            doctor: {
+              $mergeObjects: ["$doctorDetails", "$doctorUserDetails"]
+            }
+          }
+        },
+        {
           $project: {
             doctorId: 0,
             isDeleted: 0,
-            "hospital._id": 0
+            "hospital._id": 0,
+            doctorDetails: 0,
+            doctorUserDetails: 0,
+            "doctor.userType": 0,
+            "doctor.status": 0,
+            "doctor.username": 0,
+            "doctor.password": 0,
+            "doctor.favorites": 0,
+            "doctor.dateOfBirth": 0,
+            "doctor.deviceToken": 0
           }
         }
       ],

@@ -171,4 +171,17 @@ module.exports = app => {
       res.send(schedule);
     });
   });
+
+  app.get(routes.GET_SCHEDULE_HOSPITALS, (req, res) => {
+    adminService.getScheduleHospitals(hospitals => {
+      res.send(hospitals);
+    });
+  });
+
+  app.get(routes.GET_SCHEDULE_DOCTORS + "/:hospitalId", (req, res) => {
+    const { hospitalId } = req.params;
+    adminService.getScheduleDoctors(hospitalId, doctors => {
+      res.send(doctors);
+    });
+  });
 };

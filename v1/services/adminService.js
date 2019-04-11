@@ -1245,6 +1245,128 @@ module.exports = {
         }
       }
     );
+  },
+
+  /**
+   * getScheduleHospitals method is used to fetch all the hospitals based on the schedules.
+   *
+   * @param {Function} callback
+   */
+  getScheduleHospitals(callback) {
+    Schedule.aggregate(
+      [
+        {
+          $lookup: {
+            from: "hospitals",
+            localField: "hospitalId",
+            foreignField: "_id",
+            as: "hospitalDetails"
+          }
+        },
+        {
+          $unwind: "$hospitalDetails"
+        },
+        {
+          $group: {
+            _id: "$hospitalDetails"
+          }
+        }
+      ],
+      (err, schedules) => {
+        if (err) {
+          callback([]);
+        } else {
+          let hospitals = schedules.map(schedule => {
+            const {
+              _id,
+              name,
+              address,
+              location,
+              pincode,
+              landmark
+            } = schedule._id;
+            return {
+              hospitalId: _id,
+              name,
+              address,
+              location,
+              pincode,
+              landmark
+            };
+          });
+          callback(hospitals);
+        }
+      }
+    );
+  },
+
+  /**
+   * getScheduleDoctors method is used to fetch list of doctors
+   * based on the hospital available in the schedules collection.
+   *
+   * @param {String} hospitalId
+   * @param {Function} callback
+   */
+  getScheduleDoctors(hospitalId, callback) {
+    Schedule.aggregate(
+      [
+        {
+          $match: {
+            hospitalId: mongoose.Types.ObjectId(hospitalId)
+          }
+        },
+        {
+          $lookup: {
+            from: "doctors",
+            localField: "doctorId",
+            foreignField: "_id",
+            as: "doctorMainDetails"
+          }
+        },
+        {
+          $unwind: "$doctorMainDetails"
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "doctorMainDetails.userId",
+            foreignField: "_id",
+            as: "doctorUserDetails"
+          }
+        },
+        {
+          $unwind: "$doctorUserDetails"
+        },
+        {
+          $addFields: {
+            doctorDetails: {
+              $mergeObjects: ["$doctorMainDetails", "$doctorUserDetails"]
+            }
+          }
+        },
+        {
+          $group: {
+            _id: "$doctorDetails"
+          }
+        }
+      ],
+      (err, schedules) => {
+        if (err) {
+          callback([]);
+        } else {
+          const doctors = schedules.map(schedule => {
+            const { _id, specialization, fullName, username } = schedule._id;
+            return {
+              doctorId: _id,
+              specialization,
+              name: fullName,
+              mobile: username
+            };
+          });
+          callback(doctors);
+        }
+      }
+    );
   }
 };
 

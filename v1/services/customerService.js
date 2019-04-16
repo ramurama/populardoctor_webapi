@@ -265,17 +265,17 @@ module.exports = {
       Schedule.aggregate(
         [
           {
+            $match: {
+              doctorId: mongoose.Types.ObjectId(doctorId),
+              isDeleted: false
+            }
+          },
+          {
             $lookup: {
               from: "hospitals",
               localField: "hospitalId",
               foreignField: "_id",
               as: "hospital"
-            }
-          },
-          {
-            $match: {
-              doctorId: mongoose.Types.ObjectId(doctorId),
-              isDeleted: false
             }
           },
           {

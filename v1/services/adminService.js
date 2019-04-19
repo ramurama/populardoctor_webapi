@@ -21,7 +21,7 @@ module.exports = {
    * @param {Object} doctorData
    * @param {Function} callback
    */
-  createDoctor(doctorData, callback) {
+  async createDoctor(doctorData, callback) {
     const {
       mobile,
       password,
@@ -35,38 +35,48 @@ module.exports = {
       profileContent
     } = doctorData;
 
-    //user document
-    let user = new User();
-    user.username = mobile;
-    user.userType = userType.DOCTOR;
-    user.status = activationStatus.ACTIVE;
-    user.fullName = fullName;
-    user.dateOfBirth = dateOfBirth;
-    user.gender = gender;
-    user.profileImage = profileImage;
-    user.password = bcrypt.hashSync(
-      password,
-      bcrypt.genSaltSync(passwordConfig.SALT)
-    );
+    try {
+      const isUserExists = await _checkIfUserAlreadyExists(mobile);
+      if (!isUserExists) {
+        //user document
+        let user = new User();
+        user.username = mobile;
+        user.userType = userType.DOCTOR;
+        user.status = activationStatus.ACTIVE;
+        user.fullName = fullName;
+        user.dateOfBirth = dateOfBirth;
+        user.gender = gender;
+        user.profileImage = profileImage;
+        user.password = bcrypt.hashSync(
+          password,
+          bcrypt.genSaltSync(passwordConfig.SALT)
+        );
 
-    User.collection
-      .insertOne(user)
-      .then(async res => {
-        //doctor document
-        let doctor = new Doctor();
-        doctor.userId = user._id;
-        doctor.specialization = specialization;
-        doctor.yearsOfExperience = yearsOfExperience;
-        doctor.degree = degree;
-        doctor.profileContent = profileContent;
-        Doctor.collection
-          .save(doctor)
-          .then(res => callback(true))
-          .catch(err => console.log("***** Error saving doctor. " + err));
-      })
-      .catch(err =>
-        console.log("***** Error inserting into user model. " + err)
-      );
+        User.collection
+          .insertOne(user)
+          .then(async res => {
+            //doctor document
+            let doctor = new Doctor();
+            doctor.userId = user._id;
+            doctor.specialization = specialization;
+            doctor.yearsOfExperience = yearsOfExperience;
+            doctor.degree = degree;
+            doctor.profileContent = profileContent;
+            Doctor.collection
+              .save(doctor)
+              .then(res => callback(true, "Doctor created successfully."))
+              .catch(err => console.log("***** Error saving doctor. " + err));
+          })
+          .catch(err =>
+            console.log("***** Error inserting into user model. " + err)
+          );
+      } else {
+        callback(false, "Entered mobile number already exists!");
+      }
+    } catch (err) {
+      console.log(err);
+      callback(false, "Unkown error!");
+    }
   },
 
   /**
@@ -1001,22 +1011,59 @@ module.exports = {
   },
 
   /**
+   * getMasterFrontdeskUsers method is used to get all the list of available frontdesk users.
+   *
+   * @param {Function} callback
+   */
+  getMasterFrontdeskUsers(callback) {
+    User.find(
+      { userType: userType.FRONTDESK },
+      {
+        deviceToken: 0,
+        dateOfBirth: 0,
+        password: 0,
+        favorites: 0,
+        status: 0,
+        userType: 0,
+        userId: 0
+      },
+      (err, users) => {
+        if (err) {
+          callback([]);
+        } else {
+          let frontdeskUsers = users.map(user => {
+            const { _id, username, fullName } = user;
+            return {
+              frontdeskUserId: _id,
+              name: fullName,
+              mobile: username
+            };
+          });
+          callback(frontdeskUsers);
+        }
+      }
+    );
+  },
+
+  /**
    * createFrontdeskUser method is used to create a frontdesk user
    *
    * @param {Object} userData
    * @param {Function} callback
    */
   async createFrontdeskUser(userData, callback) {
+    const { mobile, fullName, password, gender, dateOfBirth } = userData;
     try {
-      const isFrontdeskUserExists = await _checkIfFrontdeskUserExists(userData);
-      if (!isFrontdeskUserExists) {
-        const { mobile, fullName, password, doctorId, hospitalId } = userData;
+      const isUserExists = await _checkIfUserAlreadyExists(mobile);
+      if (!isUserExists) {
         //user document
         let user = new User();
         user.username = mobile;
         user.userType = userType.FRONTDESK;
         user.status = activationStatus.ACTIVE;
         user.fullName = fullName;
+        user.dateOfBirth = dateOfBirth;
+        user.gender = gender;
         user.password = bcrypt.hashSync(
           password,
           bcrypt.genSaltSync(passwordConfig.SALT)
@@ -1025,31 +1072,11 @@ module.exports = {
         User.collection
           .insertOne(user)
           .then(res => {
-            Schedule.updateMany(
-              {
-                doctorId: mongoose.Types.ObjectId(doctorId),
-                hospitalId: mongoose.Types.ObjectId(hospitalId)
-              },
-              {
-                $set: {
-                  frontdeskUserId: user._id
-                }
-              },
-              (err, raw) => {
-                if (err) {
-                  callback(false, "Unknown err!");
-                } else {
-                  callback(true, "Frontdesk user create successfully.");
-                }
-              }
-            );
+            callback(true, "Frontdesk user create successfully.");
           })
           .catch(err => console.log("Error creating frontdesk user. " + err));
       } else {
-        callback(
-          false,
-          "Frontdesk user already exists for the entered combination of doctor and hospital."
-        );
+        callback(false, "Entered mobile number is already registered!");
       }
     } catch (err) {
       console.log(err);
@@ -1058,39 +1085,47 @@ module.exports = {
   },
 
   /**
+   * linkFrontdeskUser method is used to map a frontdesk user to the given combination of
+   * hospital and doctor.
+   *
+   * @param {Object} data
+   * @param {Function} callback
+   */
+  async linkFrontdeskUser(data, callback) {
+    const { doctorId, hospitalId, frontdeskUserId } = data;
+    try {
+      let status = await _updateScheduleFrontdeskUser(
+        hospitalId,
+        doctorId,
+        frontdeskUserId
+      );
+      callback(status);
+    } catch (err) {
+      console.log(err);
+      callback(false);
+    }
+  },
+
+  /**
    * updateFrontdeskUser method updates the frontdesk user for the
    * given combination of doctorId and hospitalId
    *
    * @param {Oject} data
+   * @param {Function} callback
    */
-  updateFrontdeskUser(data, callback) {
+  async updateFrontdeskUser(data, callback) {
     const { doctorId, hospitalId, frontdeskUserId } = data;
-    Schedule.updateMany(
-      {
-        doctorId: mongoose.Types.ObjectId(doctorId),
-        hospitalId: mongoose.Types.ObjectId(hospitalId)
-      },
-      {
-        $set: {
-          frontdeskUserId: mongoose.Types.ObjectId(frontdeskUserId)
-        }
-      },
-      (err, raw) => {
-        if (err) {
-          console.log(err);
-          callback(false);
-        } else {
-          console.log(
-            "Frontdesk user updated for the combination doctorId: " +
-              doctorId +
-              " and hospitalId: " +
-              hospitalId
-          );
-          console.log(raw);
-          callback(true);
-        }
-      }
-    );
+    try {
+      let status = await _updateScheduleFrontdeskUser(
+        hospitalId,
+        doctorId,
+        frontdeskUserId
+      );
+      callback(status);
+    } catch (err) {
+      console.log(err);
+      callback(false);
+    }
   },
 
   /**
@@ -1518,32 +1553,62 @@ function _findTokenIndex(tokens, tokenNumber) {
 }
 
 /**
- * _checkIfFrontdeskUserExists method check if a frontdesk user exists already
- * for the given combination of doctor and hospital.
+ * _updateScheduleFrontdeskUser method updates the frontdesk user for the
+ * given combination of doctorId and hospitalId
  *
- * @param {Object} userData
+ * @param {String} hospitalId
+ * @param {String} doctorId
+ * @param {String} frontdeskUserId
  */
-function _checkIfFrontdeskUserExists(userData) {
-  const { doctorId, hospitalId } = userData;
+function _updateScheduleFrontdeskUser(hospitalId, doctorId, frontdeskUserId) {
   return new Promise((resolve, reject) => {
-    Schedule.find(
+    Schedule.updateMany(
       {
         doctorId: mongoose.Types.ObjectId(doctorId),
         hospitalId: mongoose.Types.ObjectId(hospitalId)
       },
-      (err, schedules) => {
+      {
+        $set: {
+          frontdeskUserId: mongoose.Types.ObjectId(frontdeskUserId)
+        }
+      },
+      (err, raw) => {
         if (err) {
-          reject(err);
+          console.log(err);
+          reject(false);
         } else {
-          if (utils.isNullOrEmpty(schedules)) {
-            //combination does not exists
-            resolve(false);
-          } else {
-            //combination exists
-            resolve(true);
-          }
+          console.log(
+            "Frontdesk user updated for the combination doctorId: " +
+              doctorId +
+              " and hospitalId: " +
+              hospitalId
+          );
+          console.log(raw);
+          resolve(true);
         }
       }
     );
+  });
+}
+
+/**
+ * _checkIfUserAlreadyExists method is used to check
+ * if a user with the given mobile number already exists.
+ *
+ * @param {String} mobile
+ */
+function _checkIfUserAlreadyExists(mobile) {
+  return new Promise((resolve, reject) => {
+    User.findOne({ username: mobile }, (err, user) => {
+      if (err) {
+        reject(err);
+      } else {
+        if (utils.isNullOrEmpty(user)) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      }
+    });
   });
 }

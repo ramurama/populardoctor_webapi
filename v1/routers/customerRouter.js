@@ -1,40 +1,52 @@
-const passport = require("passport");
-const routes = require("../constants/routes");
-const customerService = require("../services/customerService");
-const settingsService = require("../services/settingsService");
+const passport = require('passport');
+const routes = require('../constants/routes');
+const customerService = require('../services/customerService');
+const settingsService = require('../services/settingsService');
 
 module.exports = app => {
   app.get(
     routes.GET_INITIAL_DATA,
-    passport.authenticate("jwt", { session: false }),
+    passport.authenticate('jwt', { session: false }),
     (req, res) => {
       const specializations = customerService.getSpecializations();
       const locations = customerService.getLocations();
       const favorites = customerService.getFavorites(req.user.username);
       const support = settingsService.getSupportDetails();
-      Promise.all([specializations, locations, favorites, support])
+      const bookingWithoutFeedback = customerService.getLatestBookingWithoutFeedback(
+        req.user._id
+      );
+      Promise.all([
+        specializations,
+        locations,
+        favorites,
+        support,
+        bookingWithoutFeedback
+      ])
         .then(data => {
           res.send({
             specializations: data[0],
             locations: data[1],
             favorites: data[2],
-            support: data[3]
+            support: data[3],
+            bookingWithoutFeedback: data[4]
           });
         })
         .catch(err => {
+          console.log(err);
           res.send({
             specializations: [],
             locations: [],
             favorites: [],
-            support: {}
+            support: {},
+            bookingsWithoutFeedback: []
           });
         });
     }
   );
 
   app.get(
-    routes.GET_DOCTORS_LIST + "/:location/:specialization",
-    passport.authenticate("jwt", { session: false }),
+    routes.GET_DOCTORS_LIST + '/:location/:specialization',
+    passport.authenticate('jwt', { session: false }),
     (req, res) => {
       const { location, specialization } = req.params;
       customerService.getDoctorsList(
@@ -48,8 +60,8 @@ module.exports = app => {
   );
 
   app.get(
-    routes.GET_DOCTOR_SCHEDULES + "/:userId",
-    passport.authenticate("jwt", { session: false }),
+    routes.GET_DOCTOR_SCHEDULES + '/:userId',
+    passport.authenticate('jwt', { session: false }),
     (req, res) => {
       customerService.getSchedules(req.params.userId, (status, schedules) => {
         res.send(schedules);
@@ -58,8 +70,8 @@ module.exports = app => {
   );
 
   app.get(
-    routes.GET_TOKENS + "/:doctorId" + "/:scheduleId",
-    passport.authenticate("jwt", { session: false }),
+    routes.GET_TOKENS + '/:doctorId' + '/:scheduleId',
+    passport.authenticate('jwt', { session: false }),
     (req, res) => {
       const { doctorId, scheduleId } = req.params;
       customerService.getTokens(doctorId, scheduleId, (status, tokens) => {
@@ -70,7 +82,7 @@ module.exports = app => {
 
   app.post(
     routes.BLOCK_TOKEN,
-    passport.authenticate("jwt", { session: false }),
+    passport.authenticate('jwt', { session: false }),
     (req, res) => {
       const { doctorId, scheduleId, tokenDate, tokenNumber } = req.body;
       customerService.blockToken(
@@ -87,7 +99,7 @@ module.exports = app => {
 
   app.post(
     routes.ADD_FAVORITE,
-    passport.authenticate("jwt", { session: false }),
+    passport.authenticate('jwt', { session: false }),
     (req, res) => {
       const { userId } = req.body;
       const mobile = req.user.username;
@@ -99,7 +111,7 @@ module.exports = app => {
 
   app.post(
     routes.REMOVE_FAVORITE,
-    passport.authenticate("jwt", { send: false }),
+    passport.authenticate('jwt', { send: false }),
     (req, res) => {
       const { userId } = req.body;
       const mobile = req.user.username;
@@ -111,7 +123,7 @@ module.exports = app => {
 
   app.post(
     routes.GET_FAVORITES,
-    passport.authenticate("jwt", { session: false }),
+    passport.authenticate('jwt', { session: false }),
     (req, res) => {
       const { favorites } = req.body;
       customerService.getFavoriteDoctors(favorites, favoriteDoctors => {
@@ -122,7 +134,7 @@ module.exports = app => {
 
   app.post(
     routes.BOOK_TOKEN,
-    passport.authenticate("jwt", { session: false }),
+    passport.authenticate('jwt', { session: false }),
     (req, res) => {
       const bookingData = {
         ...req.body,
@@ -136,10 +148,21 @@ module.exports = app => {
 
   app.get(
     routes.GET_BOOKING_HISTORY,
-    passport.authenticate("jwt", { session: false }),
+    passport.authenticate('jwt', { session: false }),
     (req, res) => {
       customerService.getBookingHistory(req.user._id, data => {
         res.send(data);
+      });
+    }
+  );
+
+  app.put(
+    routes.SUBMIT_FEEDBACK,
+    passport.authenticate('jwt', { session: false }),
+    (req, res) => {
+      const { bookingId, rating, suggestions } = req.body;
+      customerService.submitFeedback(bookingId, rating, suggestions, status => {
+        res.send({ status });
       });
     }
   );

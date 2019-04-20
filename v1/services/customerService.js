@@ -68,14 +68,20 @@ module.exports = {
    */
   getFavorites(mobile) {
     return new Promise((resolve, reject) => {
-      User.findOne({ username: mobile }, (err, user) => {
+      User.findOne({ username: mobile }, async (err, user) => {
         if (err) {
           reject(err);
         } else {
           if (utils.isNullOrEmpty(user.favorites)) {
             resolve([]);
           } else {
-            resolve(user.favorites);
+            try {
+              const favorites = await _getFavoriteDoctors(user.favorites);
+              resolve(favorites);
+            } catch (err) {
+              console.log(err);
+              reject(err);
+            }
           }
         }
       });
@@ -135,56 +141,6 @@ module.exports = {
     } catch (err) {
       callback(false, null);
     }
-  },
-
-  /**
-   * getFavorites method fetches a list of doctors matching the favoritesArray.
-   *
-   * @param {Array} favoritesArray
-   * @param {Function} callback
-   */
-  getFavoriteDoctors(favoritesArray, callback) {
-    Doctor.aggregate(
-      [
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'userId',
-            foreignField: '_id',
-            as: 'doctorDetails'
-          }
-        },
-        {
-          $unwind: '$doctorDetails'
-        },
-        {
-          $project: {
-            'doctorDetails._id': 0,
-            'doctorDetails.password': 0,
-            'doctorDetails.username': 0,
-            'doctorDetails.userType': 0,
-            'doctorDetails.status': 0,
-            'doctorDetails.favorites': 0,
-            'doctorDetails.dateOfBirth': 0,
-            yearsOfExperience: 0
-          }
-        }
-      ],
-      (err, favoriteDoctors) => {
-        if (err) {
-          callback([]);
-        } else {
-          const favorites = favoriteDoctors
-            .map(doctor => {
-              if (favoritesArray.includes(doctor.userId.toString())) {
-                return doctor;
-              }
-            })
-            .filter(element => !utils.isUndefined(element));
-          callback(favorites);
-        }
-      }
-    );
   },
 
   /**
@@ -890,7 +846,7 @@ function _updateTokenStatus(doctorId, scheduleId, tokenDate, tokenNumber) {
  */
 function _updateFavorites(mobile, userId, operation) {
   return new Promise((resolve, reject) => {
-    User.findOne({ username: mobile }, (err, user) => {
+    User.findOne({ username: mobile }, async (err, user) => {
       if (err) {
         reject(err);
       } else {
@@ -909,22 +865,86 @@ function _updateFavorites(mobile, userId, operation) {
         const modifiedSize = favorites.length;
 
         if (utils.isEqual(initialSize, modifiedSize)) {
-          resolve(favorites);
+          try {
+            const favoriteDoctors = await _getFavoriteDoctors(favorites);
+            resolve(favoriteDoctors);
+          } catch (err) {
+            console.log(err);
+            reject(err);
+          }
         } else {
           User.updateOne(
             { username: mobile },
             { $set: { favorites } },
-            (err, raw) => {
+            async (err, raw) => {
               if (err) {
                 reject(err);
               } else {
-                resolve(favorites);
+                try {
+                  const favoriteDoctors = await _getFavoriteDoctors(favorites);
+                  resolve(favoriteDoctors);
+                } catch (err) {
+                  console.log(err);
+                  reject(err);
+                }
               }
             }
           );
         }
       }
     });
+  });
+}
+
+/**
+ * getFavorites method fetches a list of doctors matching the favoritesArray.
+ *
+ * @param {Array} favoritesArray
+ */
+function _getFavoriteDoctors(favoritesArray) {
+  return new Promise((resolve, reject) => {
+    Doctor.aggregate(
+      [
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'doctorDetails'
+          }
+        },
+        {
+          $unwind: '$doctorDetails'
+        },
+        {
+          $project: {
+            'doctorDetails._id': 0,
+            'doctorDetails.password': 0,
+            'doctorDetails.username': 0,
+            'doctorDetails.userType': 0,
+            'doctorDetails.status': 0,
+            'doctorDetails.favorites': 0,
+            'doctorDetails.dateOfBirth': 0,
+            'doctorDetails.deviceToken': 0,
+            yearsOfExperience: 0
+          }
+        }
+      ],
+      (err, favoriteDoctors) => {
+        if (err) {
+          reject([]);
+        } else {
+          const favorites = favoriteDoctors
+            .map(doctor => {
+              if (favoritesArray.includes(doctor.userId.toString())) {
+                return doctor;
+              }
+            })
+            .filter(element => !utils.isUndefined(element));
+          resolve(favorites);
+        }
+      }
+    );
   });
 }
 

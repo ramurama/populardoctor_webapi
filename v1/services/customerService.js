@@ -688,7 +688,6 @@ module.exports = {
         } else {
           try {
             //update TokenTable document status to OPEN for allowing other users to book the same token.
-
             const tokenTableUpdateStatus = await _updateTokenTableDoc(booking);
             callback(tokenTableUpdateStatus);
           } catch (err) {
@@ -701,6 +700,12 @@ module.exports = {
   }
 };
 
+/**
+ * _updateTokenTableDoc method is used to update the status 
+ *  of the booking to CANCELLED in TokenTable collection
+ * 
+ * @param {String} booking 
+ */
 function _updateTokenTableDoc(booking) {
   const { tokenDate, doctorId, scheduleId, token } = booking;
   return new Promise((resolve, reject) => {

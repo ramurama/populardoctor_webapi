@@ -1,15 +1,15 @@
-const mongoose = require("mongoose");
-const modelNames = require("../constants/modelNames");
+const mongoose = require('mongoose');
+const modelNames = require('../constants/modelNames');
 const Doctor = mongoose.model(modelNames.DOCTOR);
 const TokenTable = mongoose.model(modelNames.TOKEN_TABLE);
 const Schedule = mongoose.model(modelNames.SCHEDULE);
 const Booking = mongoose.model(modelNames.BOOKING);
 const BookingOtp = mongoose.model(modelNames.BOOKING_OTP);
-const tokenBookingStatus = require("../constants/tokenBookingStatus");
-const utils = require("../utils");
-const moment = require("moment");
-const momentTz = require("moment-timezone");
-const messageService = require("../services/messageService");
+const tokenBookingStatus = require('../constants/tokenBookingStatus');
+const utils = require('../utils');
+const moment = require('moment');
+const momentTz = require('moment-timezone');
+const messageService = require('../services/messageService');
 
 module.exports = {
   /**
@@ -40,7 +40,7 @@ module.exports = {
       TokenTable.collection
         .insertOne(tokenTable)
         .then(res => callback(true))
-        .catch(err => console.log("***** Error creating token table. " + err));
+        .catch(err => console.log('***** Error creating token table. ' + err));
     } catch (err) {
       callback(false);
     }
@@ -59,8 +59,8 @@ module.exports = {
       tomorrow.setDate(today.getDate() + 1);
       const tomorrowMoment = utils.getMoment(tomorrow);
 
-      const tokenDate = tomorrowMoment.format("YYYY-MM-DD").toString();
-      const weekday = tomorrowMoment.format("ddd").toString();
+      const tokenDate = tomorrowMoment.format('YYYY-MM-DD').toString();
+      const weekday = tomorrowMoment.format('ddd').toString();
 
       const schedules = await _getSchedulesForWeekday(doctorId, weekday);
       const tokenTables = await _getTokenTablesForWeekday(doctorId, tokenDate);
@@ -111,36 +111,36 @@ module.exports = {
           },
           {
             $lookup: {
-              from: "users",
-              localField: "userId",
-              foreignField: "_id",
-              as: "userDetails"
+              from: 'users',
+              localField: 'userId',
+              foreignField: '_id',
+              as: 'userDetails'
             }
           },
           {
-            $unwind: "$userDetails"
+            $unwind: '$userDetails'
           },
           {
             $lookup: {
-              from: "schedules",
-              localField: "scheduleId",
-              foreignField: "_id",
-              as: "scheduleDetails"
+              from: 'schedules',
+              localField: 'scheduleId',
+              foreignField: '_id',
+              as: 'scheduleDetails'
             }
           },
           {
-            $unwind: "$scheduleDetails"
+            $unwind: '$scheduleDetails'
           },
           {
             $lookup: {
-              from: "hospitals",
-              localField: "scheduleDetails.hospitalId",
-              foreignField: "_id",
-              as: "hospitalDetails"
+              from: 'hospitals',
+              localField: 'scheduleDetails.hospitalId',
+              foreignField: '_id',
+              as: 'hospitalDetails'
             }
           },
           {
-            $unwind: "$hospitalDetails"
+            $unwind: '$hospitalDetails'
           },
           {
             $sort: {
@@ -161,17 +161,17 @@ module.exports = {
               bookedTimeStamp: 0,
               status: 0,
               scheduleDetails: 0,
-              "userDetails._id": 0,
-              "userDetails.password": 0,
-              "userDetails.userType": 0,
-              "userDetails.status": 0,
-              "userDetails.userId": 0,
-              "userDetails.dateOfBirth": 0,
-              "userDetails.gender": 0,
-              "userDetails.deviceToken": 0,
-              "userDetails.favorites": 0,
-              "hospitalDetails._id": 0,
-              "hospitalDetails.landmark": 0
+              'userDetails._id': 0,
+              'userDetails.password': 0,
+              'userDetails.userType': 0,
+              'userDetails.status': 0,
+              'userDetails.userId': 0,
+              'userDetails.dateOfBirth': 0,
+              'userDetails.gender': 0,
+              'userDetails.deviceToken': 0,
+              'userDetails.favorites': 0,
+              'hospitalDetails._id': 0,
+              'hospitalDetails.landmark': 0
             }
           }
         ],
@@ -237,7 +237,7 @@ module.exports = {
             const { hospitalDetails, startTime, endTime } = schedule;
             const obj = {
               hospitalName: hospitalDetails.name,
-              hospitalTime: startTime + " to " + endTime,
+              hospitalTime: startTime + ' to ' + endTime,
               appointmentDate: today,
               visitorsList
             };
@@ -284,36 +284,36 @@ module.exports = {
           },
           {
             $lookup: {
-              from: "users",
-              localField: "userId",
-              foreignField: "_id",
-              as: "userDetails"
+              from: 'users',
+              localField: 'userId',
+              foreignField: '_id',
+              as: 'userDetails'
             }
           },
           {
-            $unwind: "$userDetails"
+            $unwind: '$userDetails'
           },
           {
             $lookup: {
-              from: "schedules",
-              localField: "scheduleId",
-              foreignField: "_id",
-              as: "scheduleDetails"
+              from: 'schedules',
+              localField: 'scheduleId',
+              foreignField: '_id',
+              as: 'scheduleDetails'
             }
           },
           {
-            $unwind: "$scheduleDetails"
+            $unwind: '$scheduleDetails'
           },
           {
             $lookup: {
-              from: "hospitals",
-              localField: "scheduleDetails.hospitalId",
-              foreignField: "_id",
-              as: "hospitalDetails"
+              from: 'hospitals',
+              localField: 'scheduleDetails.hospitalId',
+              foreignField: '_id',
+              as: 'hospitalDetails'
             }
           },
           {
-            $unwind: "$hospitalDetails"
+            $unwind: '$hospitalDetails'
           },
           {
             $project: {
@@ -327,17 +327,17 @@ module.exports = {
               bookedTimeStamp: 0,
               status: 0,
               scheduleDetails: 0,
-              "userDetails._id": 0,
-              "userDetails.password": 0,
-              "userDetails.userType": 0,
-              "userDetails.status": 0,
-              "userDetails.userId": 0,
-              "userDetails.dateOfBirth": 0,
-              "userDetails.gender": 0,
-              "userDetails.deviceToken": 0,
-              "userDetails.favorites": 0,
-              "hospitalDetails._id": 0,
-              "hospitalDetails.landmark": 0
+              'userDetails._id': 0,
+              'userDetails.password': 0,
+              'userDetails.userType': 0,
+              'userDetails.status': 0,
+              'userDetails.userId': 0,
+              'userDetails.dateOfBirth': 0,
+              'userDetails.gender': 0,
+              'userDetails.deviceToken': 0,
+              'userDetails.favorites': 0,
+              'hospitalDetails._id': 0,
+              'hospitalDetails.landmark': 0
             }
           }
         ],
@@ -345,7 +345,7 @@ module.exports = {
           if (utils.isNullOrEmpty(booking)) {
             callback(
               false,
-              "Appointment has been made for a different doctor.",
+              'Appointment has been made for a different doctor.',
               null
             );
           } else {
@@ -354,7 +354,7 @@ module.exports = {
         }
       );
     } catch (err) {
-      callback(false, "Unknown error!", null);
+      callback(false, 'Unknown error!', null);
     }
   },
 
@@ -400,13 +400,13 @@ module.exports = {
               if (bookingUpdateStatus) {
                 resolve({ status: true, message: null });
               } else {
-                resolve({ status: false, message: "Unknown error!" });
+                resolve({ status: false, message: 'Unknown error!' });
               }
             } catch (err) {
               reject(err);
             }
           } else {
-            resolve({ status: false, message: "Incorrect OTP entered." });
+            resolve({ status: false, message: 'Incorrect OTP entered.' });
           }
         }
       });
@@ -452,35 +452,35 @@ module.exports = {
           },
           {
             $lookup: {
-              from: "schedules",
-              localField: "scheduleId",
-              foreignField: "_id",
-              as: "scheduleDetails"
+              from: 'schedules',
+              localField: 'scheduleId',
+              foreignField: '_id',
+              as: 'scheduleDetails'
             }
           },
           {
-            $unwind: "$scheduleDetails"
+            $unwind: '$scheduleDetails'
           },
           {
             $lookup: {
-              from: "hospitals",
-              localField: "scheduleDetails.hospitalId",
-              foreignField: "_id",
-              as: "hospitalDetails"
+              from: 'hospitals',
+              localField: 'scheduleDetails.hospitalId',
+              foreignField: '_id',
+              as: 'hospitalDetails'
             }
           },
           {
-            $unwind: "$hospitalDetails"
+            $unwind: '$hospitalDetails'
           },
           {
             $project: {
               doctorId: 0,
               tokenDate: 0,
               scheduleDetails: 0,
-              "hospitalDetails._id": 0,
-              "hospitalDetails.landmark": 0,
-              "hospitalDetails.address": 0,
-              "hospitalDetails.pincode": 0
+              'hospitalDetails._id': 0,
+              'hospitalDetails.landmark': 0,
+              'hospitalDetails.address': 0,
+              'hospitalDetails.pincode': 0
             }
           }
         ],
@@ -654,14 +654,14 @@ function _getBookingsForTheDay(today, doctorId) {
         },
         {
           $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            as: "userDetails"
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'userDetails'
           }
         },
         {
-          $unwind: "$userDetails"
+          $unwind: '$userDetails'
         },
         {
           $project: {
@@ -674,15 +674,15 @@ function _getBookingsForTheDay(today, doctorId) {
             startTimeStamp: 0,
             bookedTimeStamp: 0,
             status: 0,
-            "userDetails._id": 0,
-            "userDetails.password": 0,
-            "userDetails.userType": 0,
-            "userDetails.status": 0,
-            "userDetails.userId": 0,
-            "userDetails.dateOfBirth": 0,
-            "userDetails.gender": 0,
-            "userDetails.deviceToken": 0,
-            "userDetails.favorites": 0
+            'userDetails._id': 0,
+            'userDetails.password': 0,
+            'userDetails.userType': 0,
+            'userDetails.status': 0,
+            'userDetails.userId': 0,
+            'userDetails.dateOfBirth': 0,
+            'userDetails.gender': 0,
+            'userDetails.deviceToken': 0,
+            'userDetails.favorites': 0
           }
         }
       ],
@@ -707,7 +707,7 @@ function _getSchedulesForTheDay(today, doctorId) {
   return new Promise((resolve, reject) => {
     today = new Date(today);
     const todayMoment = moment(today);
-    const weekday = todayMoment.format("ddd");
+    const weekday = todayMoment.format('ddd');
     Schedule.aggregate(
       [
         {
@@ -718,14 +718,14 @@ function _getSchedulesForTheDay(today, doctorId) {
         },
         {
           $lookup: {
-            from: "hospitals",
-            localField: "hospitalId",
-            foreignField: "_id",
-            as: "hospitalDetails"
+            from: 'hospitals',
+            localField: 'hospitalId',
+            foreignField: '_id',
+            as: 'hospitalDetails'
           }
         },
         {
-          $unwind: "$hospitalDetails"
+          $unwind: '$hospitalDetails'
         },
         {
           $project: {
@@ -764,14 +764,14 @@ function _getSchedulesForWeekday(doctorId, weekday) {
         },
         {
           $lookup: {
-            from: "hospitals",
-            localField: "hospitalId",
-            foreignField: "_id",
-            as: "hospitalDetails"
+            from: 'hospitals',
+            localField: 'hospitalId',
+            foreignField: '_id',
+            as: 'hospitalDetails'
           }
         },
         {
-          $unwind: "$hospitalDetails"
+          $unwind: '$hospitalDetails'
         },
         {
           $project: {
@@ -820,7 +820,7 @@ function _getTokenTablesForWeekday(doctorId, tokenDate) {
 function _confirmVisit(bookingId) {
   return new Promise((resolve, reject) => {
     const visitedTimeStamp = moment(new Date())
-      .tz("Asia/Calcutta")
+      .tz('Asia/Calcutta')
       .format();
     Booking.findOneAndUpdate(
       { bookingId },
@@ -832,7 +832,10 @@ function _confirmVisit(bookingId) {
           //delete booking otp
           _deleteBookingOtp(bookingId);
           //update the token in tokenTables collection, change the status to VISITED from BOOKED
-          _updateTokenTableTokenStatus(booking);
+          //update only if token is not fasttrack
+          if (booking.token.number !== 0) {
+            _updateTokenTableTokenStatus(booking);
+          }
           resolve(true);
         }
       }
@@ -847,8 +850,8 @@ function _confirmVisit(bookingId) {
  */
 function _deleteBookingOtp(bookingId) {
   BookingOtp.deleteOne({ bookingId })
-    .then(res => console.log("Bookint OTP deleted for bookingId: " + bookingId))
-    .catch(err => console.log("Error deleting bookingId." + err));
+    .then(res => console.log('Bookint OTP deleted for bookingId: ' + bookingId))
+    .catch(err => console.log('Error deleting bookingId.' + err));
 }
 
 function _cancelBooking(tokenDate, scheduleId, token) {
@@ -861,7 +864,7 @@ function _cancelBooking(tokenDate, scheduleId, token) {
         console.log(err);
       } else {
         //notify user
-        console.log("Calcelling regular and premium bookings...");
+        console.log('Calcelling regular and premium bookings...');
         _notifyUser(booking.bookingId);
       }
     }
@@ -877,10 +880,10 @@ function _cancelBooking(tokenDate, scheduleId, token) {
  */
 function _cancelAllFastTrackBookings(tokenDate, scheduleId) {
   Booking.find(
-    { tokenDate, scheduleId, "token.number": 0 },
+    { tokenDate, scheduleId, 'token.number': 0 },
     (err, bookings) => {
       if (err) {
-        console.log("Error fetching fasttrack tokens for " + tokenDate);
+        console.log('Error fetching fasttrack tokens for ' + tokenDate);
       } else {
         bookings.forEach(booking => {
           const { bookingId, userId } = booking;
@@ -889,7 +892,7 @@ function _cancelAllFastTrackBookings(tokenDate, scheduleId) {
               { bookingId },
               { $set: { status: tokenBookingStatus.CANCELLED } },
               (err, raw) => {
-                console.log("Cancelling fasttrack token...");
+                console.log('Cancelling fasttrack token...');
                 //notify user
                 _notifyUser(bookingId);
                 console.log(raw);
@@ -917,43 +920,43 @@ function _notifyUser(bookingId) {
       },
       {
         $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "userDetails"
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'userDetails'
         }
       },
       {
-        $unwind: "$userDetails"
+        $unwind: '$userDetails'
       },
       {
         $lookup: {
-          from: "doctors",
-          localField: "doctorId",
-          foreignField: "_id",
-          as: "doctorDetails"
+          from: 'doctors',
+          localField: 'doctorId',
+          foreignField: '_id',
+          as: 'doctorDetails'
         }
       },
       {
-        $unwind: "$doctorDetails"
+        $unwind: '$doctorDetails'
       },
       {
         $lookup: {
-          from: "users",
-          localField: "doctorDetails.userId",
-          foreignField: "_id",
-          as: "doctorUserDetails"
+          from: 'users',
+          localField: 'doctorDetails.userId',
+          foreignField: '_id',
+          as: 'doctorUserDetails'
         }
       },
       {
-        $unwind: "$doctorUserDetails"
+        $unwind: '$doctorUserDetails'
       }
     ],
     (err, booking) => {
       const doctorName = booking[0].doctorUserDetails.fullName;
-      const title = "Appointment Cancelled!";
+      const title = 'Appointment Cancelled!';
       const message =
-        "Your appointment with Dr. " + doctorName + "  has been cancelled.";
+        'Your appointment with Dr. ' + doctorName + '  has been cancelled.';
       messageService.sendPushNotificationByUser(
         booking[0].userDetails.username,
         title,
@@ -976,7 +979,6 @@ function _updateTokenTableTokenStatus(booking) {
     { tokenDate, doctorId, scheduleId },
     (err, tokenTableDoc) => {
       let tokens = tokenTableDoc.tokens;
-      console.log(tokens);
       const selectedToken = _findToken(tokens, token.number);
       selectedToken.status = tokenBookingStatus.VISITED;
       TokenTable.updateOne(
@@ -985,10 +987,10 @@ function _updateTokenTableTokenStatus(booking) {
         (err, raw) => {
           if (err) {
             console.log(
-              "Error updating tokentable token status to VISITED." + err
+              'Error updating tokentable token status to VISITED.' + err
             );
           } else {
-            console.log("TokenTable doc token status updated to VISITED.");
+            console.log('TokenTable doc token status updated to VISITED.');
             console.log(raw);
           }
         }

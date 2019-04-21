@@ -166,4 +166,14 @@ module.exports = app => {
       });
     }
   );
+
+  app.put(
+    routes.CANCEL_BOOKING + '/:bookingId',
+    passport.authenticate('jwt', { session: false }),
+    (req, res) => {
+      customerService.cancelBooking(req.params.bookingId, status => {
+        res.send({ status });
+      });
+    }
+  );
 };

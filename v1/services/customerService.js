@@ -666,8 +666,74 @@ module.exports = {
         }
       }
     );
+  },
+
+  /**
+   * cancelBooking method is used to cancel the booking made by the user.
+   * This method also triggers the update that has to be done in the tokenTable collection.
+   *
+   * @param {String} bookingId
+   * @param {Function} callback
+   */
+  cancelBooking(bookingId, callback) {
+    bookingId = parseInt(bookingId);
+    Booking.findOneAndUpdate(
+      { bookingId },
+      { $set: { status: tokenBookingStatus.CANCELLED } },
+      {},
+      async (err, booking) => {
+        if (err) {
+          console.log(err);
+          callback(false);
+        } else {
+          try {
+            //update TokenTable document status to OPEN for allowing other users to book the same token.
+
+            const tokenTableUpdateStatus = await _updateTokenTableDoc(booking);
+            callback(tokenTableUpdateStatus);
+          } catch (err) {
+            console.log(err);
+            callback(false);
+          }
+        }
+      }
+    );
   }
 };
+
+function _updateTokenTableDoc(booking) {
+  const { tokenDate, doctorId, scheduleId, token } = booking;
+  return new Promise((resolve, reject) => {
+    TokenTable.findOne(
+      { tokenDate, doctorId, scheduleId },
+      (err, tokenTableDoc) => {
+        if (err) {
+          reject(err);
+        } else {
+          let tokens = tokenTableDoc.tokens;
+          const bookedToken = _findToken(tokens, token.number);
+          bookedToken.status = tokenBookingStatus.OPEN;
+          TokenTable.update(
+            { tokenDate, doctorId, scheduleId },
+            {
+              $set: {
+                tokens
+              }
+            },
+            (err, raw) => {
+              if (err) {
+                reject(err);
+              } else {
+                console.log(raw);
+                resolve(true);
+              }
+            }
+          );
+        }
+      }
+    );
+  });
+}
 
 /**
  * _getDoctorIdByUserId method returns a doctorId given userId.

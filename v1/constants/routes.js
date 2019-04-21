@@ -61,6 +61,7 @@ module.exports = {
   BOOK_TOKEN: '/api/v1/customer/bookToken',
   GET_BOOKING_HISTORY: '/api/v1/customer/getBookingHistory',
   SUBMIT_FEEDBACK: '/api/v1/customer/submitFeedback',
+  CANCEL_BOOKING: '/api/v1/customer/cancelBooking',
 
   //doctor
   GET_NEXT_DAY_SCHEDULE_CONFIRMATIONS: '/api/v1/doctor/getNextDayConfirmations',

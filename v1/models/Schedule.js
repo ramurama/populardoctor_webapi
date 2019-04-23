@@ -14,6 +14,11 @@ const scheduleSchema = new Schema({
     ref: modelNames.HOSPITAL,
     required: true
   },
+  frontdeskUserId: {
+    type: Schema.Types.ObjectId,
+    ref: modelNames.USERS,
+    required: false
+  },
   weekday: {
     type: "string",
     enum: [
@@ -38,6 +43,10 @@ const scheduleSchema = new Schema({
   tokens: {
     type: Array,
     required: true
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false
   }
 });
 

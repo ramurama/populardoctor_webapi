@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/JustALab/docsapp_api#readme",
   "dependencies": {
+    "async-lock": "^1.2.0",
     "babel-polyfill": "^6.26.0",
     "bcrypt-nodejs": "0.0.3",
     "body-parser": "^1.18.3",

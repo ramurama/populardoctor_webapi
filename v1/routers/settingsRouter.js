@@ -65,4 +65,20 @@ module.exports = app => {
       res.send({ status });
     });
   });
+
+  app.get(routes.GET_SUPPORT_DETAILS, async (req, res) => {
+    try {
+      const support = await settingsService.getSupportDetails();
+      res.send(support);
+    } catch (err) {
+      res.send({});
+    }
+  });
+
+  app.put(routes.RESET_PASSWORD, (req, res) => {
+    const { mobile, password } = req.body;
+    settingsService.resetPassword(mobile, password, (status, message) => {
+      res.send({status, message})
+    })
+  })
 };

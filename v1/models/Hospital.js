@@ -1,22 +1,30 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const modelNames = require("../constants/modelNames");
+const modelNames = require('../constants/modelNames');
 
 const hospitalSchema = new Schema({
+  hospitalPdNumber: {
+    type: String,
+    required: true
+  },
   name: {
-    type: "string",
+    type: 'string',
     required: true
   },
   address: {
-    type: "string",
+    type: 'string',
     required: true
   },
   location: {
-    type: "string",
+    type: 'string',
+    required: true
+  },
+  landmark: {
+    type: 'string',
     required: true
   },
   pincode: {
-    type: "string",
+    type: 'string',
     required: true
   }
 });

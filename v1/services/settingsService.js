@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const modelNames = require("../constants/modelNames");
 const User = mongoose.model(modelNames.USERS);
 const MobileOtp = mongoose.model(modelNames.MOBILE_OTP);
+const UserSupport = mongoose.model(modelNames.USER_SUPPORT);
 const utils = require("../utils");
 const messageService = require("./messageService");
 const bcrypt = require("bcrypt-nodejs");
@@ -141,5 +142,46 @@ module.exports = {
     });
   },
 
-  
+  /**
+   * getSupportDetails method fetches all the user_support details from the DB.
+   *
+   */
+  getSupportDetails() {
+    return new Promise((resolve, reject) => {
+      UserSupport.find({}, { _id: 0 }, (err, support) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(support[0]);
+        }
+      });
+    });
+  },
+
+  /**
+   * resetPassword method is used to reset the forgotten password
+   *
+   * @param {String} mobile
+   * @param {String} password
+   * @param {Function} callback
+   */
+  resetPassword(mobile, password, callback) {
+    User.findOne({ username: mobile }, (err, user) => {
+      if (!utils.isNullOrEmpty(user)) {
+        User.updateOne(
+          { username: mobile },
+          { $set: { password: user.hashPassword(password) } },
+          (err, raw) => {
+            if (err) {
+              callback(false, "Error updating password. Try Again!");
+            } else {
+              callback(true, "Password has been changed successfully.");
+            }
+          }
+        );
+      } else {
+        callback(false, "User unavailable");
+      }
+    });
+  }
 };

@@ -1,16 +1,20 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const modelNames = require("../constants/modelNames");
-const gender = require("../constants/gender");
+const modelNames = require('../constants/modelNames');
+const gender = require('../constants/gender');
 
 const doctorSchema = new Schema({
+  doctorPdNumber: {
+    type: String,
+    required: true
+  },
   userId: {
     type: Schema.Types.ObjectId,
     ref: modelNames.USERS,
     required: true
   },
   specialization: {
-    type: "string",
+    type: 'string',
     required: true
   },
   yearsOfExperience: {
@@ -18,10 +22,10 @@ const doctorSchema = new Schema({
     required: true
   },
   profileContent: {
-    type: "string"
+    type: 'string'
   },
   degree: {
-    type: "string",
+    type: 'string',
     required: true
   }
 });

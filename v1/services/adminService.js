@@ -977,12 +977,18 @@ module.exports = {
           callback([]);
         } else {
           let masterData = doctors.map(doctor => {
-            const { _id, specialization, doctorDetails } = doctor;
+            const {
+              _id,
+              specialization,
+              doctorDetails,
+              doctorPdNumber
+            } = doctor;
             return {
               doctorId: _id,
               specialization,
               name: doctorDetails.fullName,
-              mobile: doctorDetails.username
+              mobile: doctorDetails.username,
+              pdNumber: doctorPdNumber
             };
           });
           callback(masterData);
@@ -1002,14 +1008,23 @@ module.exports = {
         callback([]);
       } else {
         let masterData = hospitals.map(hospital => {
-          const { _id, name, address, location, pincode, landmark } = hospital;
+          const {
+            _id,
+            name,
+            address,
+            location,
+            pincode,
+            landmark,
+            hospitalPdNumber
+          } = hospital;
           return {
             hospitalId: _id,
             name,
             address,
             location,
             pincode,
-            landmark
+            landmark,
+            pdNumber: hospitalPdNumber
           };
         });
         callback(masterData);

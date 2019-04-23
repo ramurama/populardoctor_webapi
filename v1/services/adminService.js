@@ -351,75 +351,48 @@ module.exports = {
   /**
    * getDoctors method gets a list of doctors given a pageNo and size
    *
-   * @param {Object} pagination
    * @param {Function} callback
    */
-  getDoctors(pagination, callback) {
-    const { size, pageNo } = pagination;
-    if (pageNo < 0 || pageNo === 0) {
-      callback({ status: false, doctors: [], totalPages: null });
-    } else {
-      const skip = size * (pageNo - 1);
-      const limit = parseInt(size);
-      Doctor.aggregate(
-        [
-          {
-            $lookup: {
-              from: 'users',
-              localField: 'userId',
-              foreignField: '_id',
-              as: 'doctorDetails'
-            }
-          },
-          {
-            $unwind: '$doctorDetails'
-          },
-          {
-            $project: {
-              'doctorDetails.userType': 0,
-              'doctorDetails.password': 0,
-              'doctorDetails.favorites': 0,
-              'doctorDetails._id': 0,
-              'doctorDetails.deviceToken': 0
-            }
-          },
-          {
-            $sort: {
-              'doctorDetails.fullName': 1
-            }
-          },
-          {
-            $skip: skip
-          },
-          {
-            $limit: limit
+  getDoctors(callback) {
+    Doctor.aggregate(
+      [
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'doctorDetails'
           }
-        ],
-        async (err, doctors) => {
-          try {
-            const totalRecords = await _getUsersCount(userType.DOCTOR);
-            const totalPages = Math.ceil(totalRecords / limit);
-            if (err) {
-              callback({
-                status: false,
-                doctors: [],
-                totalRecords: 0,
-                totalPages: null
-              });
-            } else {
-              callback({ status: true, totalPages, totalRecords, doctors });
-            }
-          } catch (err) {
-            callback({
-              status: false,
-              doctors: [],
-              totalRecords: 0,
-              totalPages: null
-            });
+        },
+        {
+          $unwind: '$doctorDetails'
+        },
+        {
+          $project: {
+            'doctorDetails.userType': 0,
+            'doctorDetails.password': 0,
+            'doctorDetails.favorites': 0,
+            'doctorDetails._id': 0,
+            'doctorDetails.deviceToken': 0
+          }
+        },
+        {
+          $sort: {
+            'doctorDetails.fullName': 1
           }
         }
-      );
-    }
+      ],
+      (err, doctors) => {
+        if (err) {
+          callback({
+            status: false,
+            doctors: []
+          });
+        } else {
+          callback({ status: true, doctors });
+        }
+      }
+    );
   },
 
   /**
@@ -428,103 +401,59 @@ module.exports = {
    * @param {Object} pagination
    * @param {Function} callback
    */
-  getUsers(pagination, userType, callback) {
-    const { size, pageNo } = pagination;
-    if (pageNo < 0 || pageNo === 0) {
-      callback({ status: false, users: [], totalPages: null });
-    } else {
-      const skip = size * (pageNo - 1);
-      const limit = parseInt(size);
-      User.find(
-        { userType },
-        { userType: 0, password: 0, favorites: 0, deviceToken: 0 },
-        {
-          skip,
-          limit,
-          sort: {
-            fullName: 1
-          }
-        },
-        async (err, users) => {
-          if (err) {
-            callback({
-              status: false,
-              users: [],
-              totalPages: null,
-              totalRecords: 0
-            });
-          } else {
-            try {
-              const totalRecords = await _getUsersCount(userType);
-              const totalPages = Math.ceil(totalRecords / limit);
-              callback({ status: true, totalPages, totalRecords, users });
-            } catch (err) {
-              callback({
-                status: false,
-                totalPages: 0,
-                users: [],
-                totalRecords: 0
-              });
-            }
-          }
+  getUsers(userType, callback) {
+    User.find(
+      { userType },
+      { userType: 0, password: 0, favorites: 0, deviceToken: 0 },
+      {
+        sort: {
+          fullName: 1
         }
-      );
-    }
+      },
+      (err, users) => {
+        if (err) {
+          callback({
+            status: false,
+            users: []
+          });
+        } else {
+          callback({ status: true, users });
+        }
+      }
+    );
   },
 
   /**
    * getHospitals method returns a list of hospitals with respect to pagination params.
    *
    * @param {String} location
-   * @param {Object} pagination
    * @param {Function} callback
    */
-  getHospitals(location, pagination, callback) {
+  getHospitals(location, callback) {
     let find = {};
     if (!utils.isStringsEqual(location, 'all')) {
       find = { location };
     }
-    const { size, pageNo } = pagination;
-    if (pageNo < 0 || pageNo === 0) {
-      callback({ status: false, hospitals: [], totalPages: null });
-    } else {
-      const skip = size * (pageNo - 1);
-      const limit = parseInt(size);
-      Hospital.find(
-        find,
-        {},
-        {
-          skip,
-          limit,
-          sort: {
-            name: 1
-          }
-        },
-        async (err, hospitals) => {
-          if (err) {
-            callback({
-              status: false,
-              hospitals: [],
-              totalPages: null,
-              totalRecords: 0
-            });
-          } else {
-            try {
-              const totalRecords = await _getHospitalsCount(location);
-              const totalPages = Math.ceil(totalRecords / limit);
-              callback({ status: true, totalPages, totalRecords, hospitals });
-            } catch (err) {
-              callback({
-                status: true,
-                totalPages: 0,
-                hospitals: [],
-                totalRecords: 0
-              });
-            }
-          }
+
+    Hospital.find(
+      find,
+      {},
+      {
+        sort: {
+          name: 1
         }
-      );
-    }
+      },
+      (err, hospitals) => {
+        if (err) {
+          callback({
+            status: false,
+            hospitals: []
+          });
+        } else {
+          callback({ status: true, hospitals });
+        }
+      }
+    );
   },
 
   /**

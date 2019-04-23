@@ -1,7 +1,7 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const modelNames = require("../constants/modelNames");
-const tokenBookingStatus = require("../constants/tokenBookingStatus");
+const modelNames = require('../constants/modelNames');
+const tokenBookingStatus = require('../constants/tokenBookingStatus');
 
 const bookingSchema = new Schema({
   bookingId: {
@@ -28,7 +28,7 @@ const bookingSchema = new Schema({
     required: true
   },
   bookedTimeStamp: {
-    type: "string"
+    type: 'string'
   },
   latLng: {
     type: Array,
@@ -43,7 +43,7 @@ const bookingSchema = new Schema({
     required: true
   },
   status: {
-    type: "string",
+    type: 'string',
     enum: [
       tokenBookingStatus.BOOKED,
       tokenBookingStatus.VISITED,
@@ -52,7 +52,17 @@ const bookingSchema = new Schema({
     default: tokenBookingStatus.BOOKED
   },
   visitedTimeStamp: {
-    type: "string"
+    type: 'string'
+  },
+  feedbackGiven: {
+    type: Boolean,
+    required: true
+  },
+  rating: {
+    type: Number
+  },
+  suggestions: {
+    type: 'string'
   }
 });
 

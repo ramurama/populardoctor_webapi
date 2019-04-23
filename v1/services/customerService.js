@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const modelNames = require("../constants/modelNames");
+const mongoose = require('mongoose');
+const modelNames = require('../constants/modelNames');
 const User = mongoose.model(modelNames.USERS);
 const Doctor = mongoose.model(modelNames.DOCTOR);
 const Specialization = mongoose.model(modelNames.SPECIALIZATION);
@@ -10,13 +10,13 @@ const TokenTable = mongoose.model(modelNames.TOKEN_TABLE);
 const AutoNumber = mongoose.model(modelNames.AUTO_NUMBER);
 const Booking = mongoose.model(modelNames.BOOKING);
 const BookingOtp = mongoose.model(modelNames.BOOKING_OTP);
-const utils = require("../utils");
-const tokenBookingStatus = require("../constants/tokenBookingStatus");
-const moment = require("moment");
-const momentTz = require("moment-timezone");
-const CronJob = require("cron").CronJob;
-const operations = require("../constants/operation");
-const AsyncLock = require("async-lock");
+const utils = require('../utils');
+const tokenBookingStatus = require('../constants/tokenBookingStatus');
+const moment = require('moment');
+const momentTz = require('moment-timezone');
+const CronJob = require('cron').CronJob;
+const operations = require('../constants/operation');
+const AsyncLock = require('async-lock');
 
 const BOOKING_TIME_LIMIT = 4; //4 hours
 
@@ -68,17 +68,42 @@ module.exports = {
    */
   getFavorites(mobile) {
     return new Promise((resolve, reject) => {
-      User.findOne({ username: mobile }, (err, user) => {
+      User.findOne({ username: mobile }, async (err, user) => {
         if (err) {
           reject(err);
         } else {
           if (utils.isNullOrEmpty(user.favorites)) {
             resolve([]);
           } else {
-            resolve(user.favorites);
+            try {
+              const favorites = await _getFavoriteDoctors(user.favorites);
+              resolve(favorites);
+            } catch (err) {
+              console.log(err);
+              reject(err);
+            }
           }
         }
       });
+    });
+  },
+
+  /**
+   * getLatestBookingWithoutFeedback method gets latest booking details without feedback.
+   *
+   * @param {ObjectId} userId
+   */
+  getLatestBookingWithoutFeedback(userId) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const bookingWithoutFeedback = await _getLatestBookingWithoutFeedback(
+          userId
+        );
+        resolve(bookingWithoutFeedback);
+      } catch (err) {
+        console.log(err);
+        reject(err);
+      }
     });
   },
 
@@ -119,56 +144,6 @@ module.exports = {
   },
 
   /**
-   * getFavorites method fetches a list of doctors matching the favoritesArray.
-   *
-   * @param {Array} favoritesArray
-   * @param {Function} callback
-   */
-  getFavoriteDoctors(favoritesArray, callback) {
-    Doctor.aggregate(
-      [
-        {
-          $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            as: "doctorDetails"
-          }
-        },
-        {
-          $unwind: "$doctorDetails"
-        },
-        {
-          $project: {
-            "doctorDetails._id": 0,
-            "doctorDetails.password": 0,
-            "doctorDetails.username": 0,
-            "doctorDetails.userType": 0,
-            "doctorDetails.status": 0,
-            "doctorDetails.favorites": 0,
-            "doctorDetails.dateOfBirth": 0,
-            yearsOfExperience: 0
-          }
-        }
-      ],
-      (err, favoriteDoctors) => {
-        if (err) {
-          callback([]);
-        } else {
-          const favorites = favoriteDoctors
-            .map(doctor => {
-              if (favoritesArray.includes(doctor.userId.toString())) {
-                return doctor;
-              }
-            })
-            .filter(element => !utils.isUndefined(element));
-          callback(favorites);
-        }
-      }
-    );
-  },
-
-  /**
    * getDoctorsList method fetches a list of doctors based on the given location and specialization.
    *
    * lookup order:
@@ -183,61 +158,61 @@ module.exports = {
       [
         {
           $lookup: {
-            from: "schedules",
-            localField: "_id",
-            foreignField: "doctorId",
-            as: "schedule"
+            from: 'schedules',
+            localField: '_id',
+            foreignField: 'doctorId',
+            as: 'schedule'
           }
         },
         {
-          $unwind: "$schedule"
+          $unwind: '$schedule'
         },
         {
           $lookup: {
-            from: "hospitals",
-            localField: "schedule.hospitalId",
-            foreignField: "_id",
-            as: "hospital"
+            from: 'hospitals',
+            localField: 'schedule.hospitalId',
+            foreignField: '_id',
+            as: 'hospital'
           }
         },
         {
-          $unwind: "$hospital"
+          $unwind: '$hospital'
         },
         {
           $match: {
-            "hospital.location": location,
+            'hospital.location': location,
             specialization
           }
         },
         {
           $group: {
-            _id: "$userId"
+            _id: '$userId'
           }
         },
         {
           $lookup: {
-            from: "users",
-            localField: "_id",
-            foreignField: "_id",
-            as: "doctorDetails"
+            from: 'users',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'doctorDetails'
           }
         },
         {
-          $unwind: "$doctorDetails"
+          $unwind: '$doctorDetails'
         },
         {
           $project: {
-            "doctorDetails.password": 0,
-            "doctorDetails.userType": 0,
-            "doctorDetails.status": 0,
-            "doctorDetails.favorites": 0,
-            "doctorDetails.dateOfBirth": 0,
-            "doctorDetails.username": 0,
-            "doctorDetails._id": 0
+            'doctorDetails.password': 0,
+            'doctorDetails.userType': 0,
+            'doctorDetails.status': 0,
+            'doctorDetails.favorites': 0,
+            'doctorDetails.dateOfBirth': 0,
+            'doctorDetails.username': 0,
+            'doctorDetails._id': 0
           }
         },
         {
-          $unwind: "$doctorDetails"
+          $unwind: '$doctorDetails'
         }
       ],
       (err, doctorsList) => {
@@ -272,36 +247,36 @@ module.exports = {
           },
           {
             $lookup: {
-              from: "hospitals",
-              localField: "hospitalId",
-              foreignField: "_id",
-              as: "hospital"
+              from: 'hospitals',
+              localField: 'hospitalId',
+              foreignField: '_id',
+              as: 'hospital'
             }
           },
           {
             $lookup: {
-              from: "doctors",
-              localField: "doctorId",
-              foreignField: "_id",
-              as: "doctorDetails"
+              from: 'doctors',
+              localField: 'doctorId',
+              foreignField: '_id',
+              as: 'doctorDetails'
             }
           },
           {
-            $unwind: "$doctorDetails"
+            $unwind: '$doctorDetails'
           },
           {
-            $unwind: "$hospital"
+            $unwind: '$hospital'
           },
           {
             $group: {
-              _id: "$doctorDetails",
+              _id: '$doctorDetails',
               schedules: {
                 $push: {
-                  scheduleId: "$_id",
-                  weekday: "$weekday",
-                  startTime: "$startTime",
-                  endTime: "$endTime",
-                  hospital: "$hospital"
+                  scheduleId: '$_id',
+                  weekday: '$weekday',
+                  startTime: '$startTime',
+                  endTime: '$endTime',
+                  hospital: '$hospital'
                 }
               }
             }
@@ -390,7 +365,7 @@ module.exports = {
               ) {
                 callback(
                   false,
-                  "Selected token has been blocked by someone. Please try again after sometime."
+                  'Selected token has been blocked by someone. Please try again after sometime.'
                 );
               } else {
                 //if the satus of the token is OPEN, set the status to BLOCKED
@@ -415,7 +390,7 @@ module.exports = {
                         tokenNumber
                       );
                       console.log(
-                        "Token number: " + tokenNumber + " has been blocked."
+                        'Token number: ' + tokenNumber + ' has been blocked.'
                       );
                       callback(true, null);
                     }
@@ -463,7 +438,7 @@ module.exports = {
         const { startTime, endTime } = tokenTableDoc;
         const startTimeStamp = utils
           .getDateTime(tokenDate, startTime)
-          .subtract(BOOKING_TIME_LIMIT, "hours")
+          .subtract(BOOKING_TIME_LIMIT, 'hours')
           .toDate();
         const endTimeStamp = utils.getDateTime(tokenDate, endTime).toDate();
         const selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
@@ -471,7 +446,7 @@ module.exports = {
 
         const bookingId = await _getAutoNumber();
         const bookedTimeStamp = moment(new Date())
-          .tz("Asia/Calcutta")
+          .tz('Asia/Calcutta')
           .format();
         Booking.collection
           .insertOne({
@@ -487,7 +462,8 @@ module.exports = {
             startTimeStamp,
             endTimeStamp,
             bookedTimeStamp,
-            status
+            status,
+            feedbackGiven: false
           })
           .then(res => {
             //generate OTP for this booking
@@ -501,11 +477,43 @@ module.exports = {
           })
           .catch(err => console.log(err));
       } else {
-        callback(false, "");
+        callback(false, '');
       }
     } catch (err) {
-      callback(false, "");
+      callback(false, '');
     }
+  },
+
+  /**
+   * submitFeedback updates the booking wit the given rating and suggestions.
+   * it returns the update status
+   *
+   * @param {String} bookingId
+   * @param {String} rating
+   * @param {String} suggestions
+   * @param {Function} callback
+   */
+  submitFeedback(bookingId, rating, suggestions, callback) {
+    bookingId = parseInt(bookingId);
+    rating = parseInt(rating);
+
+    Booking.updateOne(
+      { bookingId },
+      {
+        $set: {
+          rating,
+          suggestions,
+          feedbackGiven: true
+        }
+      },
+      async (err, raw) => {
+        if (err) {
+          callback(false);
+        } else {
+          callback(true);
+        }
+      }
+    );
   },
 
   /**
@@ -530,66 +538,66 @@ module.exports = {
         },
         {
           $lookup: {
-            from: "doctors",
-            localField: "doctorId",
-            foreignField: "_id",
-            as: "doctorDetailsTemp"
+            from: 'doctors',
+            localField: 'doctorId',
+            foreignField: '_id',
+            as: 'doctorDetailsTemp'
           }
         },
         {
-          $unwind: "$doctorDetailsTemp"
+          $unwind: '$doctorDetailsTemp'
         },
         {
           $lookup: {
-            from: "schedules",
-            localField: "scheduleId",
-            foreignField: "_id",
-            as: "scheduleDetails"
+            from: 'schedules',
+            localField: 'scheduleId',
+            foreignField: '_id',
+            as: 'scheduleDetails'
           }
         },
         {
-          $unwind: "$scheduleDetails"
+          $unwind: '$scheduleDetails'
         },
         {
           $lookup: {
-            from: "hospitals",
-            localField: "scheduleDetails.hospitalId",
-            foreignField: "_id",
-            as: "hospitalDetails"
+            from: 'hospitals',
+            localField: 'scheduleDetails.hospitalId',
+            foreignField: '_id',
+            as: 'hospitalDetails'
           }
         },
         {
-          $unwind: "$hospitalDetails"
+          $unwind: '$hospitalDetails'
         },
         {
           $lookup: {
-            from: "users",
-            localField: "doctorDetailsTemp.userId",
-            foreignField: "_id",
-            as: "doctorUserDetails"
+            from: 'users',
+            localField: 'doctorDetailsTemp.userId',
+            foreignField: '_id',
+            as: 'doctorUserDetails'
           }
         },
         {
-          $unwind: "$doctorUserDetails"
+          $unwind: '$doctorUserDetails'
         },
         {
           $addFields: {
             doctorDetails: {
-              $mergeObjects: ["$doctorDetailsTemp", "$doctorUserDetails"]
+              $mergeObjects: ['$doctorDetailsTemp', '$doctorUserDetails']
             }
           }
         },
         {
           $lookup: {
-            from: "booking_otps",
-            localField: "bookingId",
-            foreignField: "bookingId",
-            as: "bookingOtp"
+            from: 'booking_otps',
+            localField: 'bookingId',
+            foreignField: 'bookingId',
+            as: 'bookingOtp'
           }
         },
         {
           $unwind: {
-            path: "$bookingOtp",
+            path: '$bookingOtp',
             preserveNullAndEmptyArrays: true
           }
         },
@@ -610,24 +618,24 @@ module.exports = {
             bookedTimeStamp: 0,
             doctorDetailsTemp: 0,
             doctorUserDetails: 0,
-            "scheduleDetails._id": 0,
-            "scheduleDetails.tokens": 0,
-            "scheduleDetails.doctorId": 0,
-            "scheduleDetails.hospitalId": 0,
-            "hospitalDetails._id": 0,
-            "doctorDetails._id": 0,
-            "doctorDetails.userType": 0,
-            "doctorDetails.status": 0,
-            "doctorDetails.favorites": 0,
-            "doctorDetails.dateOfBirth": 0,
-            "doctorDetails.gender": 0,
-            "doctorDetails.password": 0,
-            "doctorDetails.username": 0,
-            "doctorDetails.yearsOfExperience": 0,
-            "doctorDetails.degree": 0,
-            "doctorDetails.userId": 0,
-            "bookingOtp._id": 0,
-            "bookingOtp.bookingId": 0
+            'scheduleDetails._id': 0,
+            'scheduleDetails.tokens': 0,
+            'scheduleDetails.doctorId': 0,
+            'scheduleDetails.hospitalId': 0,
+            'hospitalDetails._id': 0,
+            'doctorDetails._id': 0,
+            'doctorDetails.userType': 0,
+            'doctorDetails.status': 0,
+            'doctorDetails.favorites': 0,
+            'doctorDetails.dateOfBirth': 0,
+            'doctorDetails.gender': 0,
+            'doctorDetails.password': 0,
+            'doctorDetails.username': 0,
+            'doctorDetails.yearsOfExperience': 0,
+            'doctorDetails.degree': 0,
+            'doctorDetails.userId': 0,
+            'bookingOtp._id': 0,
+            'bookingOtp.bookingId': 0
           }
         }
       ],
@@ -658,8 +666,79 @@ module.exports = {
         }
       }
     );
+  },
+
+  /**
+   * cancelBooking method is used to cancel the booking made by the user.
+   * This method also triggers the update that has to be done in the tokenTable collection.
+   *
+   * @param {String} bookingId
+   * @param {Function} callback
+   */
+  cancelBooking(bookingId, callback) {
+    bookingId = parseInt(bookingId);
+    Booking.findOneAndUpdate(
+      { bookingId },
+      { $set: { status: tokenBookingStatus.CANCELLED } },
+      {},
+      async (err, booking) => {
+        if (err) {
+          console.log(err);
+          callback(false);
+        } else {
+          try {
+            //update TokenTable document status to OPEN for allowing other users to book the same token.
+            const tokenTableUpdateStatus = await _updateTokenTableDoc(booking);
+            callback(tokenTableUpdateStatus);
+          } catch (err) {
+            console.log(err);
+            callback(false);
+          }
+        }
+      }
+    );
   }
 };
+
+/**
+ * _updateTokenTableDoc method is used to update the status 
+ *  of the booking to CANCELLED in TokenTable collection
+ * 
+ * @param {String} booking 
+ */
+function _updateTokenTableDoc(booking) {
+  const { tokenDate, doctorId, scheduleId, token } = booking;
+  return new Promise((resolve, reject) => {
+    TokenTable.findOne(
+      { tokenDate, doctorId, scheduleId },
+      (err, tokenTableDoc) => {
+        if (err) {
+          reject(err);
+        } else {
+          let tokens = tokenTableDoc.tokens;
+          const bookedToken = _findToken(tokens, token.number);
+          bookedToken.status = tokenBookingStatus.OPEN;
+          TokenTable.update(
+            { tokenDate, doctorId, scheduleId },
+            {
+              $set: {
+                tokens
+              }
+            },
+            (err, raw) => {
+              if (err) {
+                reject(err);
+              } else {
+                console.log(raw);
+                resolve(true);
+              }
+            }
+          );
+        }
+      }
+    );
+  });
+}
 
 /**
  * _getDoctorIdByUserId method returns a doctorId given userId.
@@ -740,7 +819,7 @@ function _computeAvailabilityStatus(tokenTableDoc) {
 
   //cloning start time
   const bookingTimeStartMoment = moment(startTimeMoment);
-  bookingTimeStartMoment.subtract(BOOKING_TIME_LIMIT, "hours");
+  bookingTimeStartMoment.subtract(BOOKING_TIME_LIMIT, 'hours');
 
   // console.log("*******************");
   // console.log(nowMoment);
@@ -782,7 +861,7 @@ function _createCronJob(doctorId, scheduleId, tokenDate, tokenNumber) {
     },
     null,
     true,
-    "Asia/Calcutta"
+    'Asia/Calcutta'
   );
 }
 
@@ -816,9 +895,9 @@ function _updateTokenStatus(doctorId, scheduleId, tokenDate, tokenNumber) {
             { $set: { tokens } },
             (err, raw) => {
               console.log(
-                "Token number: " +
+                'Token number: ' +
                   tokenNumber +
-                  " has been updated to OPEN status."
+                  ' has been updated to OPEN status.'
               );
             }
           );
@@ -838,7 +917,7 @@ function _updateTokenStatus(doctorId, scheduleId, tokenDate, tokenNumber) {
  */
 function _updateFavorites(mobile, userId, operation) {
   return new Promise((resolve, reject) => {
-    User.findOne({ username: mobile }, (err, user) => {
+    User.findOne({ username: mobile }, async (err, user) => {
       if (err) {
         reject(err);
       } else {
@@ -857,22 +936,86 @@ function _updateFavorites(mobile, userId, operation) {
         const modifiedSize = favorites.length;
 
         if (utils.isEqual(initialSize, modifiedSize)) {
-          resolve(favorites);
+          try {
+            const favoriteDoctors = await _getFavoriteDoctors(favorites);
+            resolve(favoriteDoctors);
+          } catch (err) {
+            console.log(err);
+            reject(err);
+          }
         } else {
           User.updateOne(
             { username: mobile },
             { $set: { favorites } },
-            (err, raw) => {
+            async (err, raw) => {
               if (err) {
                 reject(err);
               } else {
-                resolve(favorites);
+                try {
+                  const favoriteDoctors = await _getFavoriteDoctors(favorites);
+                  resolve(favoriteDoctors);
+                } catch (err) {
+                  console.log(err);
+                  reject(err);
+                }
               }
             }
           );
         }
       }
     });
+  });
+}
+
+/**
+ * getFavorites method fetches a list of doctors matching the favoritesArray.
+ *
+ * @param {Array} favoritesArray
+ */
+function _getFavoriteDoctors(favoritesArray) {
+  return new Promise((resolve, reject) => {
+    Doctor.aggregate(
+      [
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'doctorDetails'
+          }
+        },
+        {
+          $unwind: '$doctorDetails'
+        },
+        {
+          $project: {
+            'doctorDetails._id': 0,
+            'doctorDetails.password': 0,
+            'doctorDetails.username': 0,
+            'doctorDetails.userType': 0,
+            'doctorDetails.status': 0,
+            'doctorDetails.favorites': 0,
+            'doctorDetails.dateOfBirth': 0,
+            'doctorDetails.deviceToken': 0,
+            yearsOfExperience: 0
+          }
+        }
+      ],
+      (err, favoriteDoctors) => {
+        if (err) {
+          reject([]);
+        } else {
+          const favorites = favoriteDoctors
+            .map(doctor => {
+              if (favoritesArray.includes(doctor.userId.toString())) {
+                return doctor;
+              }
+            })
+            .filter(element => !utils.isUndefined(element));
+          resolve(favorites);
+        }
+      }
+    );
   });
 }
 
@@ -886,8 +1029,8 @@ function _getAutoNumber() {
   return new Promise((resolve, reject) => {
     const lock = new AsyncLock();
     lock
-      .acquire("autoNumber", () => {
-        console.log("auto number lock acquired");
+      .acquire('autoNumber', () => {
+        console.log('auto number lock acquired');
         AutoNumber.find({}, (err, numbers) => {
           if (err) {
             reject(err);
@@ -913,7 +1056,7 @@ function _getAutoNumber() {
         });
       })
       .then(() => {
-        console.log("auto number lock released");
+        console.log('auto number lock released');
         // lock released
       });
   });
@@ -1007,5 +1150,115 @@ function _updateTokenTableDocStatus(
         }
       );
     }
+  });
+}
+
+/**
+ * _getBookingWithoutFeedback method gets the latest booking details without feedback.
+ *
+ * @param {ObjectId} userId
+ */
+function _getLatestBookingWithoutFeedback(userId) {
+  return new Promise((resolve, reject) => {
+    Booking.aggregate(
+      [
+        {
+          $match: {
+            userId,
+            feedbackGiven: false,
+            status: tokenBookingStatus.VISITED
+          }
+        },
+        {
+          $lookup: {
+            from: 'doctors',
+            localField: 'doctorId',
+            foreignField: '_id',
+            as: 'doctorMainDetails'
+          }
+        },
+        {
+          $unwind: '$doctorMainDetails'
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'doctorMainDetails.userId',
+            foreignField: '_id',
+            as: 'doctorUserDetails'
+          }
+        },
+        {
+          $unwind: '$doctorUserDetails'
+        },
+        {
+          $addFields: {
+            doctorDetails: {
+              $mergeObjects: ['$doctorMainDetails', '$doctorUserDetails']
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            userId: 0,
+            doctorId: 0,
+            scheduleId: 0,
+            token: 0,
+            startTime: 0,
+            endTime: 0,
+            latLng: 0,
+            startTimeStamp: 0,
+            endTimeStamp: 0,
+            status: 0,
+            feedbackGiven: 0,
+            bookedTimeStamp: 0,
+            visitedTimeStamp: 0,
+            doctorMainDetails: 0,
+            doctorUserDetails: 0,
+            'doctorDetails._id': 0,
+            'doctorDetails.userId': 0,
+            'doctorDetails.specialization': 0,
+            'doctorDetails.yearsOfExperience': 0,
+            'doctorDetails.degree': 0,
+            'doctorDetails.profileContent': 0,
+            'doctorDetails.userType': 0,
+            'doctorDetails.status': 0,
+            'doctorDetails.favorites': 0,
+            'doctorDetails.username': 0,
+            'doctorDetails.dateOfBirth': 0,
+            'doctorDetails.gender': 0,
+            'doctorDetails.password': 0,
+            'doctorDetails.profileImage': 0,
+            'doctorDetails.deviceToken': 0
+          }
+        },
+        {
+          $sort: {
+            bookingId: -1
+          }
+        },
+        {
+          $limit: 1
+        }
+      ],
+      (err, booking) => {
+        if (err) {
+          reject(err);
+        } else {
+          if (!utils.isNullOrEmpty(booking)) {
+            const { bookingId, doctorDetails, tokenDate } = booking[0];
+            const bookingData = {
+              bookingId,
+              doctorName: doctorDetails.fullName,
+              appointmentDate: tokenDate
+            };
+            resolve(bookingData);
+          } else {
+            resolve({});
+          }
+        }
+      }
+    );
   });
 }

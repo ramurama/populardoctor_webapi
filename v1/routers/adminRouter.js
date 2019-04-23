@@ -1,6 +1,6 @@
-const routes = require("../constants/routes");
-const adminService = require("../services/adminService");
-const userType = require("../constants/userType");
+const routes = require('../constants/routes');
+const adminService = require('../services/adminService');
+const userType = require('../constants/userType');
 
 module.exports = app => {
   app.post(routes.CREATE_DOCTOR, (req, res) => {
@@ -28,27 +28,27 @@ module.exports = app => {
     });
   });
 
-  app.get(routes.GET_DOCTORS + "/:pageNo/:size", (req, res) => {
-    adminService.getDoctors(req.params, data => {
+  app.get(routes.GET_DOCTORS, (req, res) => {
+    adminService.getDoctors(data => {
       res.send(data);
     });
   });
 
-  app.get(routes.GET_CUSTOMERS + "/:pageNo/:size", (req, res) => {
-    adminService.getUsers(req.params, userType.CUSTOMER, data => {
+  app.get(routes.GET_CUSTOMERS, (req, res) => {
+    adminService.getUsers(userType.CUSTOMER, data => {
       res.send(data);
     });
   });
 
-  app.get(routes.GET_FRONTDESK_USERS + "/:pageNo/:size", (req, res) => {
-    adminService.getUsers(req.params, userType.FRONTDESK, data => {
+  app.get(routes.GET_FRONTDESK_USERS, (req, res) => {
+    adminService.getUsers(userType.FRONTDESK, data => {
       res.send(data);
     });
   });
 
-  app.get(routes.GET_HOSPITALS + "/:location/:pageNo/:size", (req, res) => {
-    const { size, pageNo, location } = req.params;
-    adminService.getHospitals(location, { size, pageNo }, data => {
+  app.get(routes.GET_HOSPITALS + '/:location', (req, res) => {
+    const { location } = req.params;
+    adminService.getHospitals(location, data => {
       res.send(data);
     });
   });
@@ -67,14 +67,14 @@ module.exports = app => {
     });
   });
 
-  app.delete(routes.DELETE_SCHEDULE + "/:scheduleId", (req, res) => {
+  app.delete(routes.DELETE_SCHEDULE + '/:scheduleId', (req, res) => {
     const { scheduleId } = req.params;
     adminService.deleteSchedule(scheduleId, status => {
       res.send({ status });
     });
   });
 
-  app.delete(routes.DELETE_TOKEN + "/:scheduleId/:tokenNumber", (req, res) => {
+  app.delete(routes.DELETE_TOKEN + '/:scheduleId/:tokenNumber', (req, res) => {
     const { scheduleId, tokenNumber } = req.params;
     adminService.deleteToken(scheduleId, tokenNumber, status => {
       res.send({ status });
@@ -88,14 +88,14 @@ module.exports = app => {
     });
   });
 
-  app.get(routes.GET_BOOKING_HISTORY_ADMIN + "/:pageNo/:size", (req, res) => {
+  app.get(routes.GET_BOOKING_HISTORY_ADMIN + '/:pageNo/:size', (req, res) => {
     adminService.getBookingHistory(req.params, data => {
       res.send(data);
     });
   });
 
   app.get(
-    routes.GET_BOOKING_HISTORY_DETAIL_ADMIN + "/:bookingId",
+    routes.GET_BOOKING_HISTORY_DETAIL_ADMIN + '/:bookingId',
     (req, res) => {
       const { bookingId } = req.params;
       adminService.getBookingHistoryDetail(bookingId, data => {
@@ -141,7 +141,7 @@ module.exports = app => {
   });
 
   app.get(
-    routes.GET_DR_FRONTDESK_USER + "/:doctorId/:hospitalId",
+    routes.GET_DR_FRONTDESK_USER + '/:doctorId/:hospitalId',
     (req, res) => {
       const { doctorId, hospitalId } = req.params;
       adminService.getDoctorFrontdeskUsers(doctorId, hospitalId, user => {
@@ -156,28 +156,28 @@ module.exports = app => {
     });
   });
 
-  app.put(routes.UPDATE_DOCTOR + "/:doctorId", (req, res) => {
+  app.put(routes.UPDATE_DOCTOR + '/:doctorId', (req, res) => {
     const { doctorId } = req.params;
     adminService.updateDoctor(doctorId, req.body, status => {
       res.send({ status });
     });
   });
 
-  app.put(routes.UPDATE_HOSPITAL + "/:hospitalId", (req, res) => {
+  app.put(routes.UPDATE_HOSPITAL + '/:hospitalId', (req, res) => {
     const { hospitalId } = req.params;
     adminService.updateHospital(hospitalId, req.body, status => {
       res.send({ status });
     });
   });
 
-  app.get(routes.GET_SCHEDULES + "/:doctorId", (req, res) => {
+  app.get(routes.GET_SCHEDULES + '/:doctorId', (req, res) => {
     const { doctorId } = req.params;
     adminService.getSchedules(doctorId, schedules => {
       res.send(schedules);
     });
   });
 
-  app.get(routes.GET_SCHEDULE_DETAILS + "/:scheduleId", (req, res) => {
+  app.get(routes.GET_SCHEDULE_DETAILS + '/:scheduleId', (req, res) => {
     const { scheduleId } = req.params;
     adminService.getScheduleDetails(scheduleId, schedule => {
       res.send(schedule);
@@ -190,7 +190,7 @@ module.exports = app => {
     });
   });
 
-  app.get(routes.GET_SCHEDULE_DOCTORS + "/:hospitalId", (req, res) => {
+  app.get(routes.GET_SCHEDULE_DOCTORS + '/:hospitalId', (req, res) => {
     const { hospitalId } = req.params;
     adminService.getScheduleDoctors(hospitalId, doctors => {
       res.send(doctors);

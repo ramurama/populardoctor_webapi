@@ -1,11 +1,11 @@
 const passport = require("passport");
-const route = require("../constants/routes");
+const route = require("./routes");
 const jwt = require("jsonwebtoken");
 const keys = require("../../config/keys");
-const processStatus = require("../constants/processStatus");
-const userTypes = require("../constants/userType");
+const processStatus = require("../../constants/processStatus");
+const userTypes = require("../../constants/userType");
 const utils = require("../utils");
-const activationStatus = require("../constants/activationStatus");
+const activationStatus = require("../../constants/activationStatus");
 const settingsService = require("../services/settingsService");
 
 const success = {

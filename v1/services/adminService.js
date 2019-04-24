@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const modelNames = require('../constants/modelNames');
+const modelNames = require('../../constants/modelNames');
 const User = mongoose.model(modelNames.USERS);
 const Doctor = mongoose.model(modelNames.DOCTOR);
 const Specialization = mongoose.model(modelNames.SPECIALIZATION);
@@ -11,8 +11,8 @@ const DoctorPdNumber = mongoose.model(modelNames.DOCTOR_PD_NUMBER);
 const HospitalPdNumber = mongoose.model(modelNames.HOSPITAL_PD_NUMBER);
 const bcrypt = require('bcrypt-nodejs');
 const passwordConfig = require('../../config/password');
-const userType = require('../constants/userType');
-const activationStatus = require('../constants/activationStatus');
+const userType = require('../../constants/userType');
+const activationStatus = require('../../constants/activationStatus');
 const utils = require('../utils');
 const AsyncLock = require('async-lock');
 

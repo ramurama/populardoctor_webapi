@@ -5,22 +5,22 @@ const cookieSession = require('cookie-session');
 const passport = require('passport');
 const bodyParser = require('body-parser');
 
-//v1 models
-require('./v1/models/User');
-require('./v1/models/MobileOtp');
-require('./v1/models/BookingOtp');
-require('./v1/models/Specialization');
-require('./v1/models/Location');
-require('./v1/models/Hospital');
-require('./v1/models/Doctor');
-require('./v1/models/Schedule');
-require('./v1/models/TokenTable');
-require('./v1/models/Booking');
-require('./v1/models/AutoNumber');
-require('./v1/models/UserSupport');
-require('./v1/models/Announcement');
-require('./v1/models/DoctorPdNumber');
-require('./v1/models/HospitalPdNumber');
+//models
+require('./models/User');
+require('./models/MobileOtp');
+require('./models/BookingOtp');
+require('./models/Specialization');
+require('./models/Location');
+require('./models/Hospital');
+require('./models/Doctor');
+require('./models/Schedule');
+require('./models/TokenTable');
+require('./models/Booking');
+require('./models/AutoNumber');
+require('./models/UserSupport');
+require('./models/Announcement');
+require('./models/DoctorPdNumber');
+require('./models/HospitalPdNumber');
 
 //v1 services
 require('./v1/services/passport');

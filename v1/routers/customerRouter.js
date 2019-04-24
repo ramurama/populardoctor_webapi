@@ -1,5 +1,5 @@
 const passport = require('passport');
-const routes = require('../constants/routes');
+const routes = require('./routes');
 const customerService = require('../services/customerService');
 const settingsService = require('../services/settingsService');
 

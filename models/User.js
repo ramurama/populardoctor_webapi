@@ -5,7 +5,7 @@ const userType = require("../constants/userType");
 const gender = require("../constants/gender");
 const activationStatus = require("../constants/activationStatus");
 const bcrypt = require("bcrypt-nodejs");
-const passwordConfig = require("../../config/password");
+const passwordConfig = require("../config/password");
 
 const userSchema = new Schema({
   username: { type: "String", required: true, unique: true },

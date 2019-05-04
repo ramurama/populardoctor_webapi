@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const modelNames = require('../constants/modelNames');
+const modelNames = require('../../constants/modelNames');
 const User = mongoose.model(modelNames.USERS);
 const Doctor = mongoose.model(modelNames.DOCTOR);
 const Specialization = mongoose.model(modelNames.SPECIALIZATION);
@@ -11,11 +11,11 @@ const AutoNumber = mongoose.model(modelNames.AUTO_NUMBER);
 const Booking = mongoose.model(modelNames.BOOKING);
 const BookingOtp = mongoose.model(modelNames.BOOKING_OTP);
 const utils = require('../utils');
-const tokenBookingStatus = require('../constants/tokenBookingStatus');
+const tokenBookingStatus = require('../../constants/tokenBookingStatus');
 const moment = require('moment');
 const momentTz = require('moment-timezone');
 const CronJob = require('cron').CronJob;
-const operations = require('../constants/operation');
+const operations = require('../../constants/operation');
 const AsyncLock = require('async-lock');
 
 const BOOKING_TIME_LIMIT = 4; //4 hours

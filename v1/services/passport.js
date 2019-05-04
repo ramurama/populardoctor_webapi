@@ -3,7 +3,7 @@ const LocalStrategy = require("passport-local").Strategy;
 const JwtStrategy = require("passport-jwt").Strategy,
   ExtractJwt = require("passport-jwt").ExtractJwt;
 const mongoose = require("mongoose");
-const modelNames = require("../constants/modelNames");
+const modelNames = require("../../constants/modelNames");
 const keys = require("../../config/keys");
 
 const User = mongoose.model(modelNames.USERS);

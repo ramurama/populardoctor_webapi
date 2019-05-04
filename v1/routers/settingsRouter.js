@@ -1,4 +1,4 @@
-const routes = require("../constants/routes");
+const routes = require("./routes");
 const passport = require("passport");
 const settingsService = require("../services/settingsService");
 const messageService = require("../services/messageService");

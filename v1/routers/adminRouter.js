@@ -1,6 +1,6 @@
-const routes = require('../constants/routes');
+const routes = require('./routes');
 const adminService = require('../services/adminService');
-const userType = require('../constants/userType');
+const userType = require('../../constants/userType');
 
 module.exports = app => {
   app.post(routes.CREATE_DOCTOR, (req, res) => {

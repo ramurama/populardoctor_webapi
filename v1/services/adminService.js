@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const modelNames = require('../constants/modelNames');
+const modelNames = require('../../constants/modelNames');
 const User = mongoose.model(modelNames.USERS);
 const Doctor = mongoose.model(modelNames.DOCTOR);
 const Specialization = mongoose.model(modelNames.SPECIALIZATION);
@@ -7,12 +7,18 @@ const Hospital = mongoose.model(modelNames.HOSPITAL);
 const Location = mongoose.model(modelNames.LOCATION);
 const Schedule = mongoose.model(modelNames.SCHEDULE);
 const Booking = mongoose.model(modelNames.BOOKING);
+
 const Announcement = mongoose.model(modelNames.ANNOUNCEMENTS);
+
+const DoctorPdNumber = mongoose.model(modelNames.DOCTOR_PD_NUMBER);
+const HospitalPdNumber = mongoose.model(modelNames.HOSPITAL_PD_NUMBER);
+
 const bcrypt = require('bcrypt-nodejs');
 const passwordConfig = require('../../config/password');
-const userType = require('../constants/userType');
-const activationStatus = require('../constants/activationStatus');
+const userType = require('../../constants/userType');
+const activationStatus = require('../../constants/activationStatus');
 const utils = require('../utils');
+const AsyncLock = require('async-lock');
 
 module.exports = {
   /**
@@ -63,6 +69,7 @@ module.exports = {
             doctor.yearsOfExperience = yearsOfExperience;
             doctor.degree = degree;
             doctor.profileContent = profileContent;
+            doctor.doctorPdNumber = await _getDoctorPdNumber();
             Doctor.collection
               .save(doctor)
               .then(res => callback(true, 'Doctor created successfully.'))
@@ -88,19 +95,21 @@ module.exports = {
    * @param {Object} hospitalData
    * @param {Function} callback
    */
-  createHospital(hospitalData, callback) {
+  async createHospital(hospitalData, callback) {
     const { name, address, location, pincode, landmark } = hospitalData;
-    //hospital document
-    let hospital = new Hospital();
-    hospital.name = name;
-    hospital.address = address;
-    hospital.location = location;
-    hospital.pincode = pincode;
-    hospital.landmark = landmark;
-    Hospital.collection
-      .insertOne(hospital)
-      .then(async res => {
-        try {
+    try {
+      const hospitalPdNumber = await _getHospitalPdNumber();
+      //hospital document
+      let hospital = new Hospital();
+      hospital.name = name;
+      hospital.address = address;
+      hospital.location = location;
+      hospital.pincode = pincode;
+      hospital.landmark = landmark;
+      hospital.hospitalPdNumber = hospitalPdNumber;
+      Hospital.collection
+        .insertOne(hospital)
+        .then(async res => {
           if (await _isLocationExists(location)) {
             //location already exists in Location collection
             callback(true);
@@ -117,13 +126,14 @@ module.exports = {
                 )
               );
           }
-        } catch (err) {
-          callback(false);
-        }
-      })
-      .catch(err =>
-        console.log('***** Error inserting document into Hospital. ' + err)
-      );
+        })
+        .catch(err =>
+          console.log('***** Error inserting document into Hospital. ' + err)
+        );
+    } catch (err) {
+      console.log(err);
+      callback(false);
+    }
   },
 
   /**
@@ -345,7 +355,6 @@ module.exports = {
   /**
    * getDoctors method gets a list of doctors given a pageNo and size
    *
-   * @param {Object} pagination
    * @param {Function} callback
    */
   getDoctors(callback) {
@@ -422,7 +431,6 @@ module.exports = {
    * getHospitals method returns a list of hospitals with respect to pagination params.
    *
    * @param {String} location
-   * @param {Object} pagination
    * @param {Function} callback
    */
   getHospitals(location, callback) {
@@ -902,12 +910,18 @@ module.exports = {
           callback([]);
         } else {
           let masterData = doctors.map(doctor => {
-            const { _id, specialization, doctorDetails } = doctor;
+            const {
+              _id,
+              specialization,
+              doctorDetails,
+              doctorPdNumber
+            } = doctor;
             return {
               doctorId: _id,
               specialization,
               name: doctorDetails.fullName,
-              mobile: doctorDetails.username
+              mobile: doctorDetails.username,
+              pdNumber: doctorPdNumber
             };
           });
           callback(masterData);
@@ -927,14 +941,23 @@ module.exports = {
         callback([]);
       } else {
         let masterData = hospitals.map(hospital => {
-          const { _id, name, address, location, pincode, landmark } = hospital;
+          const {
+            _id,
+            name,
+            address,
+            location,
+            pincode,
+            landmark,
+            hospitalPdNumber
+          } = hospital;
           return {
             hospitalId: _id,
             name,
             address,
             location,
             pincode,
-            landmark
+            landmark,
+            pdNumber: hospitalPdNumber
           };
         });
         callback(masterData);
@@ -1352,6 +1375,92 @@ module.exports = {
     });
   }
 };
+
+/**
+ * _getDoctorPdNumber method fetches the number from collection.
+ * It then increments the number by one and is saved to the same document in the collection.
+ * Async-lock has been added inorder to prevent duplication of doctor's PD number
+ * in the case of concurrency.
+ */
+function _getDoctorPdNumber() {
+  return new Promise((resolve, reject) => {
+    const lock = new AsyncLock();
+    lock
+      .acquire('doctorPdNumber', () => {
+        console.log('Doctor PD Number --> lock acquired.');
+        DoctorPdNumber.find({}, (err, numbers) => {
+          if (err) {
+            reject(err);
+          } else {
+            const { number } = numbers[0];
+            const nextNumber = number + 1;
+            DoctorPdNumber.updateOne(
+              { number },
+              {
+                $set: {
+                  number: nextNumber
+                }
+              },
+              (err, raw) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve('DR' + number);
+                }
+              }
+            );
+          }
+        });
+      })
+      .then(() => {
+        console.log('Doctor PD Number --> lock released.');
+        //lock released
+      });
+  });
+}
+
+/**
+ * _getHospitalPdNumber method fetches the number from collection.
+ * It then increments the number by one and is saved to the same document in the collection.
+ * Async-lock has been added inorder to prevent duplication of hospitals's PD number
+ * in the case of concurrency.
+ */
+function _getHospitalPdNumber() {
+  return new Promise((resolve, reject) => {
+    const lock = new AsyncLock();
+    lock
+      .acquire('hospitalPdNumber', () => {
+        console.log('Hospital PD Number --> lock acquired.');
+        HospitalPdNumber.find({}, (err, numbers) => {
+          if (err) {
+            reject(err);
+          } else {
+            const { number } = numbers[0];
+            const nextNumber = number + 1;
+            HospitalPdNumber.updateOne(
+              { number },
+              {
+                $set: {
+                  number: nextNumber
+                }
+              },
+              (err, raw) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve('HL' + number);
+                }
+              }
+            );
+          }
+        });
+      })
+      .then(() => {
+        console.log('Hospital PD Number --> lock released.');
+        //lock relased
+      });
+  });
+}
 
 /**
  * _isLocationExists method returns true if the location already exists, return false otherwise.

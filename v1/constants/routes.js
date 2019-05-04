@@ -48,6 +48,7 @@ module.exports = {
   GET_SCHEDULE_DETAILS: '/api/v1/admin/getScheduleDetails',
   GET_SCHEDULE_HOSPITALS: '/api/v1/admin/getScheduleHospitals',
   GET_SCHEDULE_DOCTORS: '/api/v1/admin/getScheduleDoctors',
+  GET_ANNOUNCEMENTS: '/api/v1/admin/getAnnouncements',
 
   //customer
   GET_INITIAL_DATA: '/api/v1/customer/getInitialData',

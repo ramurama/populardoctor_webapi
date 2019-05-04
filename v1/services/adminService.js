@@ -7,6 +7,7 @@ const Hospital = mongoose.model(modelNames.HOSPITAL);
 const Location = mongoose.model(modelNames.LOCATION);
 const Schedule = mongoose.model(modelNames.SCHEDULE);
 const Booking = mongoose.model(modelNames.BOOKING);
+const Announcement = mongoose.model(modelNames.ANNOUNCEMENTS);
 const bcrypt = require('bcrypt-nodejs');
 const passwordConfig = require('../../config/password');
 const userType = require('../constants/userType');
@@ -1333,6 +1334,22 @@ module.exports = {
         }
       }
     );
+  },
+
+  /**
+   * getAnnouncements method fetches all the annoucements made previously
+   *
+   * @param {Function} callback
+   */
+  getAnnouncements(callback) {
+    Announcement.find({}, (err, announcements) => {
+      if (err) {
+        console.log(err);
+        callback([]);
+      } else {
+        callback(announcements);
+      }
+    });
   }
 };
 

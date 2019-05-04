@@ -196,4 +196,10 @@ module.exports = app => {
       res.send(doctors);
     });
   });
+
+  app.get(routes.GET_ANNOUNCEMENTS, (req, res) => {
+    adminService.getAnnouncements(announcements => {
+      res.send(announcements);
+    });
+  });
 };

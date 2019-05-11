@@ -1365,14 +1365,23 @@ module.exports = {
    * @param {Function} callback
    */
   getAnnouncements(callback) {
-    Announcement.find({}, (err, announcements) => {
-      if (err) {
-        console.log(err);
-        callback([]);
-      } else {
-        callback(announcements);
+    Announcement.find(
+      {},
+      {},
+      {
+        sort: {
+          date: 1
+        }
+      },
+      (err, announcements) => {
+        if (err) {
+          console.log(err);
+          callback([]);
+        } else {
+          callback(announcements);
+        }
       }
-    });
+    );
   }
 };
 

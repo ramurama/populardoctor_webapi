@@ -606,141 +606,126 @@ module.exports = {
    * @param {Object} pagination
    * @param {Function} callback
    */
-  getBookingHistory(pagination, callback) {
-    const { size, pageNo } = pagination;
-    if (pageNo < 0 || pageNo === 0) {
-      callback({ status: false, users: [], totalPages: null });
-    } else {
-      const skip = size * (pageNo - 1);
-      const limit = parseInt(size);
-      Booking.aggregate(
-        [
-          {
-            $lookup: {
-              from: 'doctors',
-              localField: 'doctorId',
-              foreignField: '_id',
-              as: 'doctorMainDetails'
-            }
-          },
-          {
-            $unwind: '$doctorMainDetails'
-          },
-          {
-            $lookup: {
-              from: 'users',
-              localField: 'doctorMainDetails.userId',
-              foreignField: '_id',
-              as: 'doctorUserDetails'
-            }
-          },
-          {
-            $unwind: '$doctorUserDetails'
-          },
-          {
-            $addFields: {
-              doctorDetails: {
-                $mergeObjects: ['$doctorMainDetails', '$doctorUserDetails']
-              }
-            }
-          },
-          {
-            $lookup: {
-              from: 'users',
-              localField: 'userId',
-              foreignField: '_id',
-              as: 'userDetails'
-            }
-          },
-          {
-            $unwind: '$userDetails'
-          },
-          {
-            $lookup: {
-              from: 'schedules',
-              localField: 'scheduleId',
-              foreignField: '_id',
-              as: 'scheduleDetails'
-            }
-          },
-          {
-            $unwind: '$scheduleDetails'
-          },
-          {
-            $lookup: {
-              from: 'hospitals',
-              localField: 'scheduleDetails.hospitalId',
-              foreignField: '_id',
-              as: 'hospitalDetails'
-            }
-          },
-          {
-            $unwind: '$hospitalDetails'
-          },
-          {
-            $sort: {
-              bookedTimeStamp: -1
-            }
-          },
-          {
-            $project: {
-              _id: 0,
-              userId: 0,
-              doctorId: 0,
-              scheduleId: 0,
-              token: 0,
-              startTime: 0,
-              endTime: 0,
-              latLng: 0,
-              startTimeStamp: 0,
-              endTimeStamp: 0,
-              doctorMainDetails: 0,
-              doctorUserDetails: 0,
-              scheduleDetails: 0,
-              'doctorDetails._id': 0,
-              'doctorDetails.userId': 0,
-              'doctorDetails.yearsOfExperience': 0,
-              'doctorDetails.degree': 0,
-              'doctorDetails.userType': 0,
-              'doctorDetails.status': 0,
-              'doctorDetails.favorites': 0,
-              'doctorDetails.username': 0,
-              'doctorDetails.password': 0,
-              'doctorDetails.dateOfBirth': 0,
-              'doctorDetails.gender': 0,
-              'doctorDetails.deviceToken': 0,
-              'userDetails._id': 0,
-              'userDetails.username': 0,
-              'userDetails.password': 0,
-              'userDetails.userType': 0,
-              'userDetails.status': 0,
-              'userDetails.userId': 0,
-              'userDetails.dateOfBirth': 0,
-              'userDetails.gender': 0,
-              'userDetails.deviceToken': 0,
-              'userDetails.favorites': 0,
-              'hospitalDetails._id': 0,
-              'hospitalDetails.landmark': 0
-            }
-          },
-          {
-            $skip: skip
-          },
-          {
-            $limit: limit
+  getBookingHistory(callback) {
+    Booking.aggregate(
+      [
+        {
+          $lookup: {
+            from: 'doctors',
+            localField: 'doctorId',
+            foreignField: '_id',
+            as: 'doctorMainDetails'
           }
-        ],
-        async (err, bookings) => {
-          try {
-            const totalRecords = await _getBookingHistoryCount();
-            const totalPages = Math.ceil(totalRecords / limit);
-            callback({ totalPages, totalRecords, bookings });
-          } catch (err) {
-            callback({ totalPages: 0, bookings: [], totalRecords: 0 });
+        },
+        {
+          $unwind: '$doctorMainDetails'
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'doctorMainDetails.userId',
+            foreignField: '_id',
+            as: 'doctorUserDetails'
+          }
+        },
+        {
+          $unwind: '$doctorUserDetails'
+        },
+        {
+          $addFields: {
+            doctorDetails: {
+              $mergeObjects: ['$doctorMainDetails', '$doctorUserDetails']
+            }
+          }
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'userDetails'
+          }
+        },
+        {
+          $unwind: '$userDetails'
+        },
+        {
+          $lookup: {
+            from: 'schedules',
+            localField: 'scheduleId',
+            foreignField: '_id',
+            as: 'scheduleDetails'
+          }
+        },
+        {
+          $unwind: '$scheduleDetails'
+        },
+        {
+          $lookup: {
+            from: 'hospitals',
+            localField: 'scheduleDetails.hospitalId',
+            foreignField: '_id',
+            as: 'hospitalDetails'
+          }
+        },
+        {
+          $unwind: '$hospitalDetails'
+        },
+        {
+          $sort: {
+            bookingTimeStamp: -1
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            userId: 0,
+            doctorId: 0,
+            scheduleId: 0,
+            token: 0,
+            startTime: 0,
+            endTime: 0,
+            latLng: 0,
+            startTimeStamp: 0,
+            endTimeStamp: 0,
+            doctorMainDetails: 0,
+            doctorUserDetails: 0,
+            scheduleDetails: 0,
+            'doctorDetails._id': 0,
+            'doctorDetails.userId': 0,
+            'doctorDetails.yearsOfExperience': 0,
+            'doctorDetails.degree': 0,
+            'doctorDetails.userType': 0,
+            'doctorDetails.status': 0,
+            'doctorDetails.favorites': 0,
+            'doctorDetails.username': 0,
+            'doctorDetails.password': 0,
+            'doctorDetails.dateOfBirth': 0,
+            'doctorDetails.gender': 0,
+            'doctorDetails.deviceToken': 0,
+            'userDetails._id': 0,
+            'userDetails.username': 0,
+            'userDetails.password': 0,
+            'userDetails.userType': 0,
+            'userDetails.status': 0,
+            'userDetails.userId': 0,
+            'userDetails.dateOfBirth': 0,
+            'userDetails.gender': 0,
+            'userDetails.deviceToken': 0,
+            'userDetails.favorites': 0,
+            'hospitalDetails._id': 0,
+            'hospitalDetails.landmark': 0
           }
         }
-      );
-    }
+      ],
+      (err, bookings) => {
+        try {
+          callback(bookings);
+        } catch (err) {
+          callback([]);
+        }
+      }
+    );
   },
 
   /**
@@ -863,7 +848,7 @@ module.exports = {
         if (err) {
           callback({});
         } else {
-          callback(booking);
+          callback(booking[0]);
         }
       }
     );

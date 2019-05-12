@@ -88,8 +88,8 @@ module.exports = app => {
     });
   });
 
-  app.get(routes.GET_BOOKING_HISTORY_ADMIN + '/:pageNo/:size', (req, res) => {
-    adminService.getBookingHistory(req.params, data => {
+  app.get(routes.GET_BOOKING_HISTORY_ADMIN, (req, res) => {
+    adminService.getBookingHistory(data => {
       res.send(data);
     });
   });

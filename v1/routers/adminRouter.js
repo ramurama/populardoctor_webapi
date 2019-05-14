@@ -1,6 +1,8 @@
 const routes = require('./routes');
 const adminService = require('../services/adminService');
+const settingsService = require('../services/settingsService');
 const userType = require('../../constants/userType');
+const passport = require('passport');
 
 module.exports = app => {
   app.post(routes.CREATE_DOCTOR, (req, res) => {
@@ -30,6 +32,7 @@ module.exports = app => {
 
   app.get(routes.GET_DOCTORS, (req, res) => {
     adminService.getDoctors(data => {
+      console.log(req.user.username);
       res.send(data);
     });
   });
@@ -206,6 +209,14 @@ module.exports = app => {
   app.put(routes.SET_SUPPORT_DETAILS, (req, res) => {
     adminService.setSupportDetails(req.body, status => {
       res.send({ status });
+    });
+  });
+
+  app.put(routes.CHANGE_PASSWORD, (req, res) => {
+    const mobile = req.user.username;
+    console.log(mobile);
+    settingsService.changePassword(mobile, req.body, (status, message) => {
+      res.send({ status, message });
     });
   });
 };

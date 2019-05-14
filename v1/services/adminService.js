@@ -7,11 +7,10 @@ const Hospital = mongoose.model(modelNames.HOSPITAL);
 const Location = mongoose.model(modelNames.LOCATION);
 const Schedule = mongoose.model(modelNames.SCHEDULE);
 const Booking = mongoose.model(modelNames.BOOKING);
-
 const Announcement = mongoose.model(modelNames.ANNOUNCEMENTS);
-
 const DoctorPdNumber = mongoose.model(modelNames.DOCTOR_PD_NUMBER);
 const HospitalPdNumber = mongoose.model(modelNames.HOSPITAL_PD_NUMBER);
+const UserSupport = mongoose.model(modelNames.USER_SUPPORT);
 
 const bcrypt = require('bcrypt-nodejs');
 const passwordConfig = require('../../config/password');
@@ -1367,6 +1366,36 @@ module.exports = {
         }
       }
     );
+  },
+
+  /**
+   * setSupportDetails method is used to update the support details.
+   *
+   * @param {Object} data
+   * @param {Function} callback
+   */
+  setSupportDetails(data, callback) {
+    const { contactNumber, contactEmail } = data;
+    UserSupport.remove({}, err => {
+      if (err) {
+        console.error(err);
+      } else {
+        console.log('user_supports collection data cleared.');
+        UserSupport.collection
+          .insertOne({
+            contactNumber,
+            contactEmail
+          })
+          .then(res => {
+            console.log('user_supports collection updated successfully.');
+            callback(true);
+          })
+          .catch(err => {
+            console.error('Failure updating user_supports collection. ' + err);
+            callback(false);
+          });
+      }
+    });
   }
 };
 

@@ -202,4 +202,10 @@ module.exports = app => {
       res.send(announcements);
     });
   });
+
+  app.put(routes.SET_SUPPORT_DETAILS, (req, res) => {
+    adminService.setSupportDetails(req.body, status => {
+      res.send({ status });
+    });
+  });
 };

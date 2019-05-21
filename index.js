@@ -4,6 +4,7 @@ const keys = require('./config/keys');
 const cookieSession = require('cookie-session');
 const passport = require('passport');
 const bodyParser = require('body-parser');
+const multer = require('multer');
 
 //models
 require('./models/User');
@@ -39,6 +40,18 @@ const adminRouterV1 = require('./v1/routers/adminRouter');
 const doctorRouterV1 = require('./v1/routers/doctorRouter');
 const frontdeskRouterV1 = require('./v1/routers/frontdeskRouter');
 
+//file uploader setup begins
+const diskStorage = multer.diskStorage({
+  destination: (req, file, callback) => {
+    callback(null, __dirname + '/doctor-profile-images');
+  },
+  filename: (req, file, callback) => {
+    callback(null, file.originalname);
+  }
+});
+const uploader = multer({ storage: diskStorage });
+//file uploader setup ends
+
 mongoose.connect(keys.mongoURI, { useNewUrlParser: true });
 
 const app = express();
@@ -57,7 +70,7 @@ authRouterV1(app);
 settingsRouterV1(app);
 notificationRouterV1(app);
 customerRouterV1(app);
-adminRouterV1(app);
+adminRouterV1(app, uploader);
 doctorRouterV1(app);
 frontdeskRouterV1(app);
 

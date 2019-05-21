@@ -4,7 +4,7 @@ const settingsService = require('../services/settingsService');
 const userType = require('../../constants/userType');
 const passport = require('passport');
 
-module.exports = app => {
+module.exports = (app, uploader) => {
   app.post(routes.CREATE_DOCTOR, (req, res) => {
     adminService.createDoctor(req.body, (status, message) => {
       res.send({ status, message });
@@ -218,4 +218,12 @@ module.exports = app => {
       res.send({ status, message });
     });
   });
+
+  app.post(
+    routes.UPLOAD_DOCTOR_PROFILE_IMAGE,
+    uploader.single('profileImage'),
+    (req, res) => {
+      res.send();
+    }
+  );
 };

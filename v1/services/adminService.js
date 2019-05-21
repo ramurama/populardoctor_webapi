@@ -11,13 +11,14 @@ const Announcement = mongoose.model(modelNames.ANNOUNCEMENTS);
 const DoctorPdNumber = mongoose.model(modelNames.DOCTOR_PD_NUMBER);
 const HospitalPdNumber = mongoose.model(modelNames.HOSPITAL_PD_NUMBER);
 const UserSupport = mongoose.model(modelNames.USER_SUPPORT);
-
 const bcrypt = require('bcrypt-nodejs');
 const passwordConfig = require('../../config/password');
 const userType = require('../../constants/userType');
 const activationStatus = require('../../constants/activationStatus');
 const utils = require('../utils');
 const AsyncLock = require('async-lock');
+const fs = require('fs');
+const google = require('./google');
 
 module.exports = {
   /**
@@ -37,7 +38,6 @@ module.exports = {
       specialization,
       yearsOfExperience,
       degree,
-      profileImage,
       profileContent
     } = doctorData;
 
@@ -52,7 +52,7 @@ module.exports = {
         user.fullName = fullName;
         user.dateOfBirth = dateOfBirth;
         user.gender = gender;
-        user.profileImage = profileImage;
+        // user.profileImage = profileImage;
         user.password = bcrypt.hashSync(
           password,
           bcrypt.genSaltSync(passwordConfig.SALT)
@@ -71,19 +71,53 @@ module.exports = {
             doctor.doctorPdNumber = await _getDoctorPdNumber();
             Doctor.collection
               .save(doctor)
-              .then(res => callback(true, 'Doctor created successfully.'))
+              .then(res =>
+                callback(
+                  true,
+                  'Doctor created successfully.',
+                  doctor.doctorPdNumber
+                )
+              )
               .catch(err => console.log('***** Error saving doctor. ' + err));
           })
           .catch(err =>
             console.log('***** Error inserting into user model. ' + err)
           );
       } else {
-        callback(false, 'Entered mobile number already exists!');
+        callback(false, 'Entered mobile number already exists!', null);
       }
     } catch (err) {
       console.log(err);
       callback(false, 'Unkown error!');
     }
+  },
+
+  /**
+   * uploadDoctorProfileImage method is used to upload the image to google storage bucket.
+   * It also performs deletion of the file once it has been successfully uploaded to google
+   * storage bucket.
+   *
+   * @param {String} doctorPdNumber
+   * @param {String} filename
+   * @param {Function} callback
+   */
+  uploadDoctorProfileImage(doctorPdNumber, filename, callback) {
+    google.uploadNewFile(filename, publicUrl => {
+      Doctor.findOne({ doctorPdNumber }, (err, doctor) => {
+        console.log(doctor);
+        User.updateOne(
+          { _id: doctor.userId },
+          { $set: { profileImage: publicUrl } }
+        )
+          .then(raw => {
+            // console.log(raw);
+            fs.unlink(google.localFilePath + filename, () => {
+              callback(true);
+            });
+          })
+          .catch(err => console.log(err));
+      });
+    });
   },
 
   /**

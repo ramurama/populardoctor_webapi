@@ -6,10 +6,25 @@ const passport = require('passport');
 
 module.exports = (app, uploader) => {
   app.post(routes.CREATE_DOCTOR, (req, res) => {
-    adminService.createDoctor(req.body, (status, message) => {
-      res.send({ status, message });
+    adminService.createDoctor(req.body, (status, message, doctorPdNumber) => {
+      res.send({ status, message, doctorPdNumber });
     });
   });
+
+  app.post(
+    routes.UPLOAD_DOCTOR_PROFILE_IMAGE + '/:doctorPdNumber',
+    uploader.single('profileImage'),
+    (req, res) => {
+      const doctorPdNumber = req.params.doctorPdNumber;
+      adminService.uploadDoctorProfileImage(
+        doctorPdNumber,
+        req.file.filename,
+        status => {
+          res.send({ status });
+        }
+      );
+    }
+  );
 
   app.post(routes.CREATE_HOSPITAL, (req, res) => {
     adminService.createHospital(req.body, status => {
@@ -218,12 +233,4 @@ module.exports = (app, uploader) => {
       res.send({ status, message });
     });
   });
-
-  app.post(
-    routes.UPLOAD_DOCTOR_PROFILE_IMAGE,
-    uploader.single('profileImage'),
-    (req, res) => {
-      res.send();
-    }
-  );
 };

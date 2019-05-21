@@ -8,8 +8,11 @@ const storage = new Storage({
 
 const BUCKET_NAME = keys.googleStorageBuckectName;
 const bucket = storage.bucket(BUCKET_NAME);
+const LOCAL_FILE_LOCATION = __dirname + '/../../doctor-profile-images/';
 
 module.exports = {
+  localFilePath: LOCAL_FILE_LOCATION,
+
   uploadNewFile(fileName, callback) {
     const file = bucket.file(fileName);
     console.log(fileName);
@@ -21,11 +24,9 @@ module.exports = {
           console.log('File already exists');
           await bucket
             .file(fileName)
-            .delete(async () =>
-              callback(await uploadFile(__dirname, fileName))
-            );
+            .delete(async () => callback(await uploadFile(fileName)));
         } else {
-          callback(await uploadFile(__dirname, fileName));
+          callback(await uploadFile(fileName));
         }
       })
       .catch(err => {
@@ -34,15 +35,15 @@ module.exports = {
   }
 };
 
-function uploadFile(location, fileName) {
+function uploadFile(fileName) {
   return new Promise((resolve, reject) => {
-    let localFileLocation = location + '/' + fileName;
+    let localFileLocation = LOCAL_FILE_LOCATION + '/' + fileName;
     bucket
       .upload(localFileLocation, { public: true })
       .then(file => {
         // file saved
         console.log('***** uploading new image');
-        resolve(getPublicThumbnailUrlForItem(fileName));
+        resolve(getPublicUrl(fileName));
       })
       .catch(err => {
         console.error(err);
@@ -52,6 +53,6 @@ function uploadFile(location, fileName) {
 }
 
 // get public url for file
-function getPublicThumbnailUrlForItem(fileName) {
+function getPublicUrl(fileName) {
   return `https://storage.googleapis.com/${BUCKET_NAME}/${fileName}`;
 }

@@ -46,7 +46,9 @@ const diskStorage = multer.diskStorage({
     callback(null, __dirname + '/doctor-profile-images');
   },
   filename: (req, file, callback) => {
-    callback(null, file.originalname);
+    const extension = file.originalname.split('.')[1];
+    const filename = `${req.params.doctorPdNumber}.${extension}`;
+    callback(null, filename);
   }
 });
 const uploader = multer({ storage: diskStorage });

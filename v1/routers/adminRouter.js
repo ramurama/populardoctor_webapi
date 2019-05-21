@@ -32,7 +32,6 @@ module.exports = app => {
 
   app.get(routes.GET_DOCTORS, (req, res) => {
     adminService.getDoctors(data => {
-      console.log(req.user.username);
       res.send(data);
     });
   });

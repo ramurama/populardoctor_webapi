@@ -1,33 +1,34 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const modelNames = require("../constants/modelNames");
-const userType = require("../constants/userType");
-const gender = require("../constants/gender");
-const activationStatus = require("../constants/activationStatus");
-const bcrypt = require("bcrypt-nodejs");
-const passwordConfig = require("../config/password");
+const modelNames = require('../constants/modelNames');
+const userType = require('../constants/userType');
+const gender = require('../constants/gender');
+const activationStatus = require('../constants/activationStatus');
+const bcrypt = require('bcrypt-nodejs');
+const passwordConfig = require('../config/password');
 
 const userSchema = new Schema({
-  username: { type: "String", required: true, unique: true },
-  password: { type: "String", required: true },
+  username: { type: 'String', required: true, unique: true, index: true },
+  password: { type: 'String', required: true },
   userType: {
-    type: "String",
+    type: 'String',
     enum: [
       userType.ADMIN,
       userType.DOCTOR,
       userType.CUSTOMER,
       userType.FRONTDESK
     ],
-    default: userType.CUSTOMER
+    default: userType.CUSTOMER,
+    index: true
   },
   status: {
-    type: "String",
+    type: 'String',
     enum: [activationStatus.ACTIVE, activationStatus.INACTIVE],
     default: activationStatus.INACTIVE,
     required: true
   },
   fullName: {
-    type: "String",
+    type: 'String',
     required: true
   },
   dateOfBirth: {
@@ -35,7 +36,7 @@ const userSchema = new Schema({
     required: false
   },
   gender: {
-    type: "String",
+    type: 'String',
     enum: [gender.MALE, gender.FEMALE]
   },
   favorites: {
@@ -43,10 +44,10 @@ const userSchema = new Schema({
     default: []
   },
   deviceToken: {
-    type: "String"
+    type: 'String'
   },
   profileImage: {
-    type: "string"
+    type: 'string'
   }
 });
 
@@ -55,5 +56,7 @@ userSchema.methods.hashPassword = password =>
 
 userSchema.methods.comparePassword = (password, hash) =>
   bcrypt.compareSync(password, hash);
+
+userSchema.set('autoIndex', true);
 
 mongoose.model(modelNames.USERS, userSchema);

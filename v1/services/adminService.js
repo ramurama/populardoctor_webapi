@@ -145,14 +145,14 @@ module.exports = {
         .then(async res => {
           if (await _isLocationExists(location)) {
             //location already exists in Location collection
-            callback(true);
+            callback(true, 'Hospital created successfully');
           } else {
             //location document
             let locationDoc = new Location();
             locationDoc.name = location;
             locationDoc.collection
               .insertOne(locationDoc)
-              .then(res => callback(true))
+              .then(res => callback(true, 'Hospital created successfully'))
               .catch(err =>
                 console.log(
                   '***** Error inserting document into Location. ' + err
@@ -165,7 +165,7 @@ module.exports = {
         );
     } catch (err) {
       console.log(err);
-      callback(false);
+      callback(false, 'Error creating hospital');
     }
   },
 

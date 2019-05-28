@@ -233,4 +233,16 @@ module.exports = (app, uploader) => {
       res.send({ status, message });
     });
   });
+
+  app.get(routes.GET_DOCTOR_DETAIL + '/:doctorPdNumber', (req, res) => {
+    adminService.getDoctorDetail(req.params.doctorPdNumber, doctor => {
+      res.send(doctor);
+    });
+  });
+
+  app.get(routes.GET_HOSPITAL_DETAIL + '/:hospitalPdNumber', (req, res) => {
+    adminService.getHospitalDetails(req.params.hospitalPdNumber, hospital => {
+      res.send(hospital);
+    });
+  });
 };

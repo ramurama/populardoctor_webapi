@@ -1430,6 +1430,95 @@ module.exports = {
           });
       }
     });
+  },
+
+  /**
+   * getDoctorDetail method fetches the details of the doctor for a given doctorPdNumber
+   *
+   * @param {String} doctorPdNumber
+   * @param {Function} callback
+   */
+  getDoctorDetail(doctorPdNumber, callback) {
+    Doctor.aggregate(
+      [
+        {
+          $match: {
+            doctorPdNumber
+          }
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'userDetails'
+          }
+        },
+        {
+          $unwind: '$userDetails'
+        },
+        {
+          $project: {
+            'userDetails.userType': 0,
+            'userDetails.status': 0,
+            'userDetails.favorites': 0,
+            'userDetails.password': 0,
+            'userDetails._id': 0
+          }
+        }
+      ],
+      (err, doctors) => {
+        if (err) {
+          console.log(err);
+          callback([]);
+        } else {
+          const {
+            _id,
+            userId,
+            specialization,
+            yearsOfExperience,
+            degree,
+            profileContent,
+            doctorPdNumber,
+            userDetails
+          } = doctors[0];
+
+          callback({
+            doctorId: _id,
+            userId,
+            specialization,
+            yearsOfExperience,
+            degree,
+            profileContent,
+            doctorPdNumber,
+            mobile: userDetails.username,
+            fullName: userDetails.fullName,
+            profileImage: userDetails.profileImage
+          });
+        }
+      }
+    );
+  },
+
+  /**
+   * getHospitalDetails method fetches the details of the hospital given the hospitalPdNUmber
+   *
+   * @param {String} hospitalPdNumber
+   * @param {Function} callback
+   */
+  getHospitalDetails(hospitalPdNumber, callback) {
+    Hospital.findOne(
+      {
+        hospitalPdNumber
+      },
+      (err, hospital) => {
+        if (err) {
+          callback([]);
+        } else {
+          callback(hospital);
+        }
+      }
+    );
   }
 };
 

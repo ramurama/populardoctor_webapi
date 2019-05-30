@@ -988,34 +988,14 @@ module.exports = {
    *
    * @param {Function} callback
    */
-  getMasterFrontdeskUsers(callback) {
-    User.find(
-      { userType: userType.FRONTDESK },
-      {
-        deviceToken: 0,
-        dateOfBirth: 0,
-        password: 0,
-        favorites: 0,
-        status: 0,
-        userType: 0,
-        userId: 0
-      },
-      (err, users) => {
-        if (err) {
-          callback([]);
-        } else {
-          let frontdeskUsers = users.map(user => {
-            const { _id, username, fullName } = user;
-            return {
-              frontdeskUserId: _id,
-              name: fullName,
-              mobile: username
-            };
-          });
-          callback(frontdeskUsers);
-        }
-      }
-    );
+  async getMasterFrontdeskUsers(callback) {
+    try {
+      const frontdeskUsers = await _getMasterFrontdeskUsers();
+      callback(frontdeskUsers);
+    } catch (err) {
+      callback([]);
+      console.error(err);
+    }
   },
 
   /**
@@ -1044,8 +1024,12 @@ module.exports = {
 
         User.collection
           .insertOne(user)
-          .then(res => {
-            callback(true, 'Frontdesk user create successfully.');
+          .then(async res => {
+            callback(
+              true,
+              'Frontdesk user create successfully.',
+              await _getMasterFrontdeskUsers()
+            );
           })
           .catch(err => console.log('Error creating frontdesk user. ' + err));
       } else {
@@ -1813,5 +1797,40 @@ function _checkIfUserAlreadyExists(mobile) {
         }
       }
     });
+  });
+}
+
+/**
+ * _getMasterFrontdeskUsers method is used to fetch all the list of front desk users
+ */
+function _getMasterFrontdeskUsers() {
+  return new Promise((resolve, reject) => {
+    User.find(
+      { userType: userType.FRONTDESK },
+      {
+        deviceToken: 0,
+        dateOfBirth: 0,
+        password: 0,
+        favorites: 0,
+        status: 0,
+        userType: 0,
+        userId: 0
+      },
+      (err, users) => {
+        if (err) {
+          reject(err);
+        } else {
+          let frontdeskUsers = users.map(user => {
+            const { _id, username, fullName } = user;
+            return {
+              frontdeskUserId: _id,
+              name: fullName,
+              mobile: username
+            };
+          });
+          resolve(frontdeskUsers);
+        }
+      }
+    );
   });
 }

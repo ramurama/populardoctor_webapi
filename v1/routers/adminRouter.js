@@ -146,9 +146,12 @@ module.exports = (app, uploader) => {
   });
 
   app.post(routes.CREATE_FRONTDESK_USER, (req, res) => {
-    adminService.createFrontdeskUser(req.body, (status, message) => {
-      res.send({ status, message });
-    });
+    adminService.createFrontdeskUser(
+      req.body,
+      (status, message, frontdeskUsers) => {
+        res.send({ status, message, frontdeskUsers });
+      }
+    );
   });
 
   app.put(routes.LINK_FRONTDESK_USER, (req, res) => {

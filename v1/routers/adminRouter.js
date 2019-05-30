@@ -27,8 +27,8 @@ module.exports = (app, uploader) => {
   );
 
   app.post(routes.CREATE_HOSPITAL, (req, res) => {
-    adminService.createHospital(req.body, status => {
-      res.send({ status });
+    adminService.createHospital(req.body, (status, message) => {
+      res.send({ status, message });
     });
   });
 

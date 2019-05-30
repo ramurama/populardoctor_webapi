@@ -170,12 +170,6 @@ module.exports = (app, uploader) => {
     }
   );
 
-  app.put(routes.UPDATE_FRONTDESK_USER, (req, res) => {
-    adminService.updateFrontdeskUser(req.body, status => {
-      res.send({ status });
-    });
-  });
-
   app.put(routes.UPDATE_DOCTOR + '/:doctorId', (req, res) => {
     const { doctorId } = req.params;
     adminService.updateDoctor(doctorId, req.body, status => {

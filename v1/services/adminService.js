@@ -1064,28 +1064,6 @@ module.exports = {
   },
 
   /**
-   * updateFrontdeskUser method updates the frontdesk user for the
-   * given combination of doctorId and hospitalId
-   *
-   * @param {Oject} data
-   * @param {Function} callback
-   */
-  async updateFrontdeskUser(data, callback) {
-    const { doctorId, hospitalId, frontdeskUserId } = data;
-    try {
-      let status = await _updateScheduleFrontdeskUser(
-        hospitalId,
-        doctorId,
-        frontdeskUserId
-      );
-      callback(status);
-    } catch (err) {
-      console.log(err);
-      callback(false);
-    }
-  },
-
-  /**
    * getDoctorFrontdeskUsers method is used to fetch the frontdesk user for the given doctorId and hospitalId
    *
    * @param {String} doctorId

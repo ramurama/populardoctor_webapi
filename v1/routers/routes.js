@@ -42,7 +42,6 @@ module.exports = {
   GET_SPECIALIZATIONS: '/api/v1/admin/getSpecializations',
   CREATE_FRONTDESK_USER: '/api/v1/admin/createFrontdeskUser',
   LINK_FRONTDESK_USER: '/api/v1/admin/linkFrontdeskUser',
-  UPDATE_FRONTDESK_USER: '/api/v1/admin/updateFrontdeskUser',
   UPDATE_DOCTOR: '/api/v1/admin/updateDoctor',
   UPDATE_HOSPITAL: '/api/v1/admin/updateHospital',
   GET_SCHEDULES: '/api/v1/admin/getSchedules',

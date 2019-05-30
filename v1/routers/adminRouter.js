@@ -1,17 +1,34 @@
-const routes = require('../constants/routes');
+const routes = require('./routes');
 const adminService = require('../services/adminService');
-const userType = require('../constants/userType');
+const settingsService = require('../services/settingsService');
+const userType = require('../../constants/userType');
+const passport = require('passport');
 
-module.exports = app => {
+module.exports = (app, uploader) => {
   app.post(routes.CREATE_DOCTOR, (req, res) => {
-    adminService.createDoctor(req.body, (status, message) => {
-      res.send({ status, message });
+    adminService.createDoctor(req.body, (status, message, doctorPdNumber) => {
+      res.send({ status, message, doctorPdNumber });
     });
   });
 
+  app.post(
+    routes.UPLOAD_DOCTOR_PROFILE_IMAGE + '/:doctorPdNumber',
+    uploader.single('profileImage'),
+    (req, res) => {
+      const doctorPdNumber = req.params.doctorPdNumber;
+      adminService.uploadDoctorProfileImage(
+        doctorPdNumber,
+        req.file.filename,
+        status => {
+          res.send({ status });
+        }
+      );
+    }
+  );
+
   app.post(routes.CREATE_HOSPITAL, (req, res) => {
-    adminService.createHospital(req.body, status => {
-      res.send({ status });
+    adminService.createHospital(req.body, (status, message) => {
+      res.send({ status, message });
     });
   });
 
@@ -88,8 +105,8 @@ module.exports = app => {
     });
   });
 
-  app.get(routes.GET_BOOKING_HISTORY_ADMIN + '/:pageNo/:size', (req, res) => {
-    adminService.getBookingHistory(req.params, data => {
+  app.get(routes.GET_BOOKING_HISTORY_ADMIN, (req, res) => {
+    adminService.getBookingHistory(data => {
       res.send(data);
     });
   });
@@ -129,9 +146,12 @@ module.exports = app => {
   });
 
   app.post(routes.CREATE_FRONTDESK_USER, (req, res) => {
-    adminService.createFrontdeskUser(req.body, (status, message) => {
-      res.send({ status, message });
-    });
+    adminService.createFrontdeskUser(
+      req.body,
+      (status, message, frontdeskUsers) => {
+        res.send({ status, message, frontdeskUsers });
+      }
+    );
   });
 
   app.put(routes.LINK_FRONTDESK_USER, (req, res) => {
@@ -194,6 +214,38 @@ module.exports = app => {
     const { hospitalId } = req.params;
     adminService.getScheduleDoctors(hospitalId, doctors => {
       res.send(doctors);
+    });
+  });
+
+  app.get(routes.GET_ANNOUNCEMENTS, (req, res) => {
+    adminService.getAnnouncements(announcements => {
+      res.send(announcements);
+    });
+  });
+
+  app.put(routes.SET_SUPPORT_DETAILS, (req, res) => {
+    adminService.setSupportDetails(req.body, status => {
+      res.send({ status });
+    });
+  });
+
+  app.put(routes.CHANGE_PASSWORD, (req, res) => {
+    const mobile = req.user.username;
+    console.log(mobile);
+    settingsService.changePassword(mobile, req.body, (status, message) => {
+      res.send({ status, message });
+    });
+  });
+
+  app.get(routes.GET_DOCTOR_DETAIL + '/:doctorPdNumber', (req, res) => {
+    adminService.getDoctorDetail(req.params.doctorPdNumber, doctor => {
+      res.send(doctor);
+    });
+  });
+
+  app.get(routes.GET_HOSPITAL_DETAIL + '/:hospitalPdNumber', (req, res) => {
+    adminService.getHospitalDetails(req.params.hospitalPdNumber, hospital => {
+      res.send(hospital);
     });
   });
 };

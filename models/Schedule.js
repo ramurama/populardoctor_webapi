@@ -1,26 +1,29 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const modelNames = require("../constants/modelNames");
-const weekdays = require("../constants/weekdays");
+const modelNames = require('../constants/modelNames');
+const weekdays = require('../constants/weekdays');
 
 const scheduleSchema = new Schema({
   doctorId: {
     type: Schema.Types.ObjectId,
     ref: modelNames.DOCTOR,
-    required: true
+    required: true,
+    index: true
   },
   hospitalId: {
     type: Schema.Types.ObjectId,
     ref: modelNames.HOSPITAL,
-    required: true
+    required: true,
+    index: true
   },
   frontdeskUserId: {
     type: Schema.Types.ObjectId,
     ref: modelNames.USERS,
-    required: false
+    required: false,
+    index: true
   },
   weekday: {
-    type: "string",
+    type: 'string',
     enum: [
       weekdays.SUN,
       weekdays.MON,
@@ -30,14 +33,15 @@ const scheduleSchema = new Schema({
       weekdays.FRI,
       weekdays.SAT
     ],
-    required: true
+    required: true,
+    index: true
   },
   startTime: {
-    type: "string",
+    type: 'string',
     required: true
   },
   endTime: {
-    type: "string",
+    type: 'string',
     required: true
   },
   tokens: {
@@ -50,4 +54,5 @@ const scheduleSchema = new Schema({
   }
 });
 
+scheduleSchema.set('autoIndex', false);
 mongoose.model(modelNames.SCHEDULE, scheduleSchema);

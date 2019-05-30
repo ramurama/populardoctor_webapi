@@ -1,14 +1,14 @@
-const mongoose = require("mongoose");
-const modelNames = require("../constants/modelNames");
+const mongoose = require('mongoose');
+const modelNames = require('../../constants/modelNames');
 const User = mongoose.model(modelNames.USERS);
 const MobileOtp = mongoose.model(modelNames.MOBILE_OTP);
 const UserSupport = mongoose.model(modelNames.USER_SUPPORT);
-const utils = require("../utils");
-const messageService = require("./messageService");
-const bcrypt = require("bcrypt-nodejs");
-const passwordConfig = require("../../config/password");
-const userType = require("../constants/userType");
-const activationStatus = require("../constants/activationStatus");
+const utils = require('../utils');
+const messageService = require('./messageService');
+const bcrypt = require('bcrypt-nodejs');
+const passwordConfig = require('../../config/password');
+const userType = require('../../constants/userType');
+const activationStatus = require('../../constants/activationStatus');
 
 module.exports = {
   /**
@@ -37,7 +37,7 @@ module.exports = {
         callback(true);
       })
       .catch(err =>
-        console.log("***** Error inserting into user model. " + err)
+        console.log('***** Error inserting into user model. ' + err)
       );
   },
 
@@ -53,7 +53,7 @@ module.exports = {
     User.findOne({ username: mobile }, (err, user) => {
       if (!utils.isNullOrEmpty(user)) {
         if (!user.comparePassword(reqData.currentPassword, user.password)) {
-          callback(false, "Incorrect old password.");
+          callback(false, 'Incorrect old password.');
         } else {
           User.updateOne(
             { username: mobile },
@@ -61,15 +61,15 @@ module.exports = {
             (err, raw) => {
               if (err) {
                 console.log(err);
-                callback(false, "Error updating password. Try Again!");
+                callback(false, 'Error updating password. Try Again!');
               } else {
-                callback(true, "Password has been changed successfully.");
+                callback(true, 'Password has been changed successfully.');
               }
             }
           );
         }
       } else {
-        callback(false, "User unavailable");
+        callback(false, 'User unavailable');
       }
     });
   },
@@ -117,10 +117,10 @@ module.exports = {
         if (utils.isStringsEqual(mobileOtpData.otp, otp)) {
           //delete otp if verified successfully
           MobileOtp.deleteOne({ mobile })
-            .then(res => callback(true, "Mobile number verified successfully."))
-            .catch(err => console.log("***** Error deleting mobile_otp data."));
+            .then(res => callback(true, 'Mobile number verified successfully.'))
+            .catch(err => console.log('***** Error deleting mobile_otp data.'));
         } else {
-          callback(false, "Incorrect OTP entered.");
+          callback(false, 'Incorrect OTP entered.');
         }
       }
     });
@@ -173,14 +173,14 @@ module.exports = {
           { $set: { password: user.hashPassword(password) } },
           (err, raw) => {
             if (err) {
-              callback(false, "Error updating password. Try Again!");
+              callback(false, 'Error updating password. Try Again!');
             } else {
-              callback(true, "Password has been changed successfully.");
+              callback(true, 'Password has been changed successfully.');
             }
           }
         );
       } else {
-        callback(false, "User unavailable");
+        callback(false, 'User unavailable');
       }
     });
   }

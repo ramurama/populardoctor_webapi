@@ -3,11 +3,11 @@ const { Schema } = mongoose;
 const modelNames = require("../constants/modelNames");
 
 const userSupportsSchema = new Schema({
-  contact_number: {
+  contactNumber: {
     type: "string",
     required: true
   },
-  contact_email: {
+  contactEmail: {
     type: "string",
     required: true
   }

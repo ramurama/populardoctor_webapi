@@ -1,10 +1,10 @@
 const firebase = require("firebase-admin");
 const mongoose = require("mongoose");
-const modelnames = require("../constants/modelNames");
+const modelnames = require("../../constants/modelNames");
 const User = mongoose.model(modelnames.USERS);
 const MobileOtp = mongoose.model(modelnames.MOBILE_OTP);
 const Announcement = mongoose.model(modelnames.ANNOUNCEMENTS);
-const firebaseTopics = require("../constants/firebaseTopics");
+const firebaseTopics = require("../../constants/firebaseTopics");
 const utils = require("../utils");
 
 var serviceAccount = require("../../config/serviceAccountKey.json");

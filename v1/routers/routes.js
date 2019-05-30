@@ -21,6 +21,7 @@ module.exports = {
   //admin
   CREATE_SPECIALIZATION: '/api/v1/admin/createSpecialization',
   CREATE_DOCTOR: '/api/v1/admin/createDoctor',
+  UPLOAD_DOCTOR_PROFILE_IMAGE: '/api/v1/admin/uploadDoctorProfileImage',
   CREATE_HOSPITAL: '/api/v1/admin/createHospital',
   CREATE_SCHEDULE: '/api/v1/admin/createSchedule',
   GET_DR_FRONTDESK_USER: '/api/v1/admin/getDoctorFrontdeskUser',
@@ -48,6 +49,11 @@ module.exports = {
   GET_SCHEDULE_DETAILS: '/api/v1/admin/getScheduleDetails',
   GET_SCHEDULE_HOSPITALS: '/api/v1/admin/getScheduleHospitals',
   GET_SCHEDULE_DOCTORS: '/api/v1/admin/getScheduleDoctors',
+  GET_ANNOUNCEMENTS: '/api/v1/admin/getAnnouncements',
+  SET_SUPPORT_DETAILS: '/api/v1/admin/setSupportDetails',
+  CHANGE_PASSWORD: '/api/v1/admin/changePassword',
+  GET_DOCTOR_DETAIL: '/api/v1/admin/getDoctorDetails',
+  GET_HOSPITAL_DETAIL: '/api/v1/admin/getHospitalDetails',
 
   //customer
   GET_INITIAL_DATA: '/api/v1/customer/getInitialData',

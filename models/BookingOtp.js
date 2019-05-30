@@ -1,11 +1,12 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const modelNames = require("../constants/modelNames");
+const modelNames = require('../constants/modelNames');
 
 const bookingOtpSchema = new Schema({
   bookingId: {
     type: Number,
-    required: true
+    required: true,
+    index: true
   },
   otp: {
     type: Number,
@@ -13,4 +14,5 @@ const bookingOtpSchema = new Schema({
   }
 });
 
+bookingOtpSchema.set('autoIndex', false);
 mongoose.model(modelNames.BOOKING_OTP, bookingOtpSchema);

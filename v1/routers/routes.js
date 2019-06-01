@@ -50,7 +50,7 @@ module.exports = {
   GET_SCHEDULE_DOCTORS: '/api/v1/admin/getScheduleDoctors',
   GET_ANNOUNCEMENTS: '/api/v1/admin/getAnnouncements',
   SET_SUPPORT_DETAILS: '/api/v1/admin/setSupportDetails',
-  CHANGE_PASSWORD: '/api/v1/admin/changePassword',
+  CHANGE_PASSWORD_ADMIN: '/api/v1/admin/changePassword',
   GET_DOCTOR_DETAIL: '/api/v1/admin/getDoctorDetails',
   GET_HOSPITAL_DETAIL: '/api/v1/admin/getHospitalDetails',
 

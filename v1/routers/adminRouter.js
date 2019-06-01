@@ -223,7 +223,7 @@ module.exports = (app, uploader) => {
     });
   });
 
-  app.put(routes.CHANGE_PASSWORD, (req, res) => {
+  app.put(routes.CHANGE_PASSWORD_ADMIN, (req, res) => {
     const mobile = req.user.username;
     console.log(mobile);
     settingsService.changePassword(mobile, req.body, (status, message) => {

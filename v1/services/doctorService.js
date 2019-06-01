@@ -8,7 +8,6 @@ const BookingOtp = mongoose.model(modelNames.BOOKING_OTP);
 const tokenBookingStatus = require('../../constants/tokenBookingStatus');
 const utils = require('../utils');
 const moment = require('moment');
-const momentTz = require('moment-timezone');
 const messageService = require('../services/messageService');
 
 module.exports = {
@@ -595,6 +594,24 @@ module.exports = {
             callback(true);
           }
         });
+      }
+    });
+  },
+
+  /**
+   * getDoctorPdNumber method is used to fetch the doctor's PD number
+   *
+   * @param {String} userId
+   * @param {Function} callback
+   */
+  getDoctorPdNumber(userId, callback) {
+    userId = mongoose.Types.ObjectId(userId);
+    Doctor.findOne({ userId }, (err, doctor) => {
+      if (err) {
+        console.error(err);
+        callback(null);
+      } else {
+        callback(doctor.doctorPdNumber);
       }
     });
   }

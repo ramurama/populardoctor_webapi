@@ -236,6 +236,7 @@ module.exports = {
             const { hospitalDetails, startTime, endTime } = schedule;
             const obj = {
               hospitalName: hospitalDetails.name,
+              hospitalPdNumber: hospitalDetails.hospitalPdNumber,
               hospitalTime: startTime + ' to ' + endTime,
               appointmentDate: today,
               visitorsList
@@ -872,17 +873,21 @@ function _deleteBookingOtp(bookingId) {
 }
 
 function _cancelBooking(tokenDate, scheduleId, token) {
-  Booking.findOneAndUpdate(
+  Booking.updateMany(
     { tokenDate, scheduleId, token },
     { $set: { status: tokenBookingStatus.CANCELLED } },
     {},
     (err, booking) => {
+      console.log(booking);
       if (err) {
         console.log(err);
       } else {
         //notify user
-        console.log('Calcelling regular and premium bookings...');
-        _notifyUser(booking.bookingId);
+        console.log('notifying users');
+        // _notifyUser(booking.bookingId);
+        Booking.find({ tokenDate, scheduleId, token }, (err, bookings) => {
+          bookings.forEach(bookingItem => _notifyUser(bookingItem.bookingId));
+        });
       }
     }
   );

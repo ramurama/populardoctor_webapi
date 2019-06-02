@@ -1444,6 +1444,13 @@ module.exports = {
             doctorPdNumber,
             userDetails
           } = doctors[0];
+          const {
+            username,
+            fullName,
+            profileImage,
+            gender,
+            dateOfBirth
+          } = userDetails;
 
           callback({
             doctorId: _id,
@@ -1453,9 +1460,11 @@ module.exports = {
             degree,
             profileContent,
             doctorPdNumber,
-            mobile: userDetails.username,
-            fullName: userDetails.fullName,
-            profileImage: userDetails.profileImage
+            mobile: username,
+            fullName,
+            profileImage,
+            gender: { label: gender, value: gender },
+            dateOfBirth
           });
         }
       }

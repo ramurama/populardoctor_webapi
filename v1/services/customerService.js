@@ -675,36 +675,43 @@ module.exports = {
    * @param {String} bookingId
    * @param {Function} callback
    */
-  cancelBooking(bookingId, callback) {
+  async cancelBooking(bookingId, callback) {
     bookingId = parseInt(bookingId);
-    Booking.findOneAndUpdate(
-      { bookingId },
-      { $set: { status: tokenBookingStatus.CANCELLED } },
-      {},
-      async (err, booking) => {
-        if (err) {
-          console.log(err);
-          callback(false);
-        } else {
-          try {
-            //update TokenTable document status to OPEN for allowing other users to book the same token.
-            const tokenTableUpdateStatus = await _updateTokenTableDoc(booking);
-            callback(tokenTableUpdateStatus);
-          } catch (err) {
+    const bookingStatus = await _getBookingStatus(bookingId);
+    if (!utils.isEqual(bookingStatus, tokenBookingStatus.VISITED)) {
+      Booking.findOneAndUpdate(
+        { bookingId },
+        { $set: { status: tokenBookingStatus.CANCELLED } },
+        {},
+        async (err, booking) => {
+          if (err) {
             console.log(err);
             callback(false);
+          } else {
+            try {
+              //update TokenTable document status to OPEN for allowing other users to book the same token.
+              const tokenTableUpdateStatus = await _updateTokenTableDoc(
+                booking
+              );
+              callback(tokenTableUpdateStatus);
+            } catch (err) {
+              console.log(err);
+              callback(false);
+            }
           }
         }
-      }
-    );
+      );
+    } else {
+      callback(false);
+    }
   }
 };
 
 /**
- * _updateTokenTableDoc method is used to update the status 
+ * _updateTokenTableDoc method is used to update the status
  *  of the booking to CANCELLED in TokenTable collection
- * 
- * @param {String} booking 
+ *
+ * @param {String} booking
  */
 function _updateTokenTableDoc(booking) {
   const { tokenDate, doctorId, scheduleId, token } = booking;
@@ -1260,5 +1267,22 @@ function _getLatestBookingWithoutFeedback(userId) {
         }
       }
     );
+  });
+}
+
+/**
+ * _getBookingStatus method fetches the booking status for a bookingId
+ *
+ * @param {Number} bookingId
+ */
+function _getBookingStatus(bookingId) {
+  return new Promise((resolve, reject) => {
+    Booking.findOne({ bookingId }, (err, booking) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(booking.status);
+      }
+    });
   });
 }

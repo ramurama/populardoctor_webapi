@@ -50,7 +50,7 @@ module.exports = {
   GET_SCHEDULE_DOCTORS: '/api/v1/admin/getScheduleDoctors',
   GET_ANNOUNCEMENTS: '/api/v1/admin/getAnnouncements',
   SET_SUPPORT_DETAILS: '/api/v1/admin/setSupportDetails',
-  CHANGE_PASSWORD: '/api/v1/admin/changePassword',
+  CHANGE_PASSWORD_ADMIN: '/api/v1/admin/changePassword',
   GET_DOCTOR_DETAIL: '/api/v1/admin/getDoctorDetails',
   GET_HOSPITAL_DETAIL: '/api/v1/admin/getHospitalDetails',
 
@@ -79,6 +79,7 @@ module.exports = {
   GET_BOOKING_STATUS: '/api/v1/doctor/getBookingStatus',
   GET_CONFIRMED_SCHEDULES_DR: '/api/v1/doctor/getConfirmedSchedules',
   BLOCK_SCHEDULE_DR: '/api/v1/doctor/blockSchedule',
+  GET_DR_PD_NUMBER: '/api/v1/doctor/getPdNumber',
 
   //frontdesk
   GET_FD_TODAYS_BOOKINGS: '/api/v1/frontdesk/getTodaysBookings',

@@ -8,7 +8,6 @@ const BookingOtp = mongoose.model(modelNames.BOOKING_OTP);
 const tokenBookingStatus = require('../../constants/tokenBookingStatus');
 const utils = require('../utils');
 const moment = require('moment');
-const momentTz = require('moment-timezone');
 const messageService = require('../services/messageService');
 
 module.exports = {
@@ -237,6 +236,7 @@ module.exports = {
             const { hospitalDetails, startTime, endTime } = schedule;
             const obj = {
               hospitalName: hospitalDetails.name,
+              hospitalPdNumber: hospitalDetails.hospitalPdNumber,
               hospitalTime: startTime + ' to ' + endTime,
               appointmentDate: today,
               visitorsList
@@ -597,6 +597,24 @@ module.exports = {
         });
       }
     });
+  },
+
+  /**
+   * getDoctorPdNumber method is used to fetch the doctor's PD number
+   *
+   * @param {String} userId
+   * @param {Function} callback
+   */
+  getDoctorPdNumber(userId, callback) {
+    userId = mongoose.Types.ObjectId(userId);
+    Doctor.findOne({ userId }, (err, doctor) => {
+      if (err) {
+        console.error(err);
+        callback(null);
+      } else {
+        callback(doctor.doctorPdNumber);
+      }
+    });
   }
 };
 
@@ -855,17 +873,21 @@ function _deleteBookingOtp(bookingId) {
 }
 
 function _cancelBooking(tokenDate, scheduleId, token) {
-  Booking.findOneAndUpdate(
+  Booking.updateMany(
     { tokenDate, scheduleId, token },
     { $set: { status: tokenBookingStatus.CANCELLED } },
     {},
     (err, booking) => {
+      console.log(booking);
       if (err) {
         console.log(err);
       } else {
         //notify user
-        console.log('Calcelling regular and premium bookings...');
-        _notifyUser(booking.bookingId);
+        console.log('notifying users');
+        // _notifyUser(booking.bookingId);
+        Booking.find({ tokenDate, scheduleId, token }, (err, bookings) => {
+          bookings.forEach(bookingItem => _notifyUser(bookingItem.bookingId));
+        });
       }
     }
   );

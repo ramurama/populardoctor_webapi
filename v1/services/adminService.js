@@ -334,7 +334,32 @@ module.exports = {
         if (err) {
           callback({});
         } else {
-          callback(schedules[0]);
+          const {
+            hospital,
+            doctor,
+            hospitalId,
+            weekday,
+            startTime,
+            endTime
+          } = schedules[0];
+          const { doctorPdNumber, fullName, _id } = doctor;
+          const { hospitalPdNumber, name } = hospital;
+          const schedule = {
+            doctor: {
+              value: doctorPdNumber,
+              label: `${fullName}(${doctorPdNumber})`,
+              id: _id
+            },
+            hospital: {
+              value: hospitalPdNumber,
+              label: `${name}(${hospitalPdNumber})`,
+              id: hospitalId
+            },
+            weekday: { value: weekday, label: weekday.toUpperCase() },
+            fromTime: startTime,
+            toTime: endTime
+          };
+          callback(schedule);
         }
       }
     );
@@ -1455,7 +1480,7 @@ module.exports = {
           callback({
             doctorId: _id,
             userId,
-            specialization,
+            specialization: { label: specialization, value: specialization },
             yearsOfExperience,
             degree,
             profileContent,

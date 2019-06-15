@@ -11,6 +11,7 @@ const Announcement = mongoose.model(modelNames.ANNOUNCEMENTS);
 const DoctorPdNumber = mongoose.model(modelNames.DOCTOR_PD_NUMBER);
 const HospitalPdNumber = mongoose.model(modelNames.HOSPITAL_PD_NUMBER);
 const UserSupport = mongoose.model(modelNames.USER_SUPPORT);
+const Scores = mongoose.model(modelNames.SCORES);
 const bcrypt = require('bcrypt-nodejs');
 const passwordConfig = require('../../config/password');
 const userType = require('../../constants/userType');
@@ -71,13 +72,15 @@ module.exports = {
             doctor.doctorPdNumber = await _getDoctorPdNumber();
             Doctor.collection
               .save(doctor)
-              .then(res =>
+              .then(res => {
+                //create an entry for scores collection
+                _createScoresRecord(doctor._id);
                 callback(
                   true,
                   'Doctor created successfully.',
                   doctor.doctorPdNumber
-                )
-              )
+                );
+              })
               .catch(err => console.log('***** Error saving doctor. ' + err));
           })
           .catch(err =>
@@ -1845,4 +1848,30 @@ function _getMasterFrontdeskUsers() {
       }
     );
   });
+}
+
+/**
+ * _createScoresRecord method creates an entry in the scores collection
+ *
+ * @param {ObjectId} doctorId
+ */
+function _createScoresRecord(doctorId) {
+  let scores = new Scores();
+  scores.doctorId = doctorId;
+  scores.trust = 0;
+  scores.popularity = 0;
+  scores.schedule = 0;
+  scores.total = 0;
+  Scores.collection
+    .save(scores)
+    .then(res => {})
+    .catch(err =>
+      console.error(
+        `***** Error creating scores record for doctor with _id: ${
+          doctor._id
+        }` +
+          ' ' +
+          err
+      )
+    );
 }

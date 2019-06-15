@@ -22,6 +22,7 @@ require('./models/UserSupport');
 require('./models/Announcement');
 require('./models/DoctorPdNumber');
 require('./models/HospitalPdNumber');
+require('./models/Scores');
 
 //v1 services
 require('./v1/services/passport');
@@ -30,6 +31,7 @@ require('./v1/services/customerService');
 require('./v1/services/adminService');
 require('./v1/services/doctorService');
 require('./v1/services/frontdeskService');
+require('./v1/services/scoringService');
 
 //v1 routers
 const authRouterV1 = require('./v1/routers/authRouter');
@@ -39,6 +41,7 @@ const customerRouterV1 = require('./v1/routers/customerRouter');
 const adminRouterV1 = require('./v1/routers/adminRouter');
 const doctorRouterV1 = require('./v1/routers/doctorRouter');
 const frontdeskRouterV1 = require('./v1/routers/frontdeskRouter');
+const scoringEngineRouterV1 = require('./v1/routers/scoringRouter');
 
 //file uploader setup begins
 const diskStorage = multer.diskStorage({
@@ -75,6 +78,7 @@ customerRouterV1(app);
 adminRouterV1(app, uploader);
 doctorRouterV1(app);
 frontdeskRouterV1(app);
+scoringEngineRouterV1(app);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT);

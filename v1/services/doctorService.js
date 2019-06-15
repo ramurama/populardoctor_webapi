@@ -8,7 +8,7 @@ const BookingOtp = mongoose.model(modelNames.BOOKING_OTP);
 const tokenBookingStatus = require('../../constants/tokenBookingStatus');
 const utils = require('../utils');
 const moment = require('moment');
-const messageService = require('../services/messageService');
+const messageService = require('./messageService');
 
 module.exports = {
   /**
@@ -868,7 +868,7 @@ function _confirmVisit(bookingId) {
  */
 function _deleteBookingOtp(bookingId) {
   BookingOtp.deleteOne({ bookingId })
-    .then(res => console.log('Bookint OTP deleted for bookingId: ' + bookingId))
+    .then(res => console.log('Booking OTP deleted for bookingId: ' + bookingId))
     .catch(err => console.log('Error deleting bookingId.' + err));
 }
 

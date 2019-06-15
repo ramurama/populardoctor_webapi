@@ -88,5 +88,8 @@ module.exports = {
   VERIFY_BOOKING_OTP_FD: '/api/v1/frontdesk/verifyBookingOtp',
   GET_FD_BOOKING_STATUS: '/api/v1/frontdesk/getBookingStatus',
   GET_CONFIRMED_SCHEDULES_FD: '/api/v1/frontdesk/getConfirmedSchedules',
-  BLOCK_SCHEDULE_FD: '/api/v1/frontdesk/blockSchedule'
+  BLOCK_SCHEDULE_FD: '/api/v1/frontdesk/blockSchedule',
+
+  //scoring engine
+  SCORING_ENGINE_RUN: '/api/v1/scoringEngine/run',
 };

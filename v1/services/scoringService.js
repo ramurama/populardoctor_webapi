@@ -54,9 +54,11 @@ module.exports = {
           }
         }
       ],
-      (err, bookings) => {
-        console.log(JSON.stringify(bookings));
-        // _computeScores(bookings[0]);
+      (err, data) => {
+        console.log(JSON.stringify(data));
+        let drBookings = data.map(drbooking => {
+          
+        })
       }
     );
   }

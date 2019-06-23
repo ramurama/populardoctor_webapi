@@ -20,6 +20,7 @@ const utils = require('../utils');
 const AsyncLock = require('async-lock');
 const fs = require('fs');
 const google = require('./google');
+const tokenValue = require('../../constants/fastrackToken');
 
 module.exports = {
   /**
@@ -343,24 +344,21 @@ module.exports = {
             hospitalId,
             weekday,
             startTime,
-            endTime
+            endTime,
+            tokens
           } = schedules[0];
           const { doctorPdNumber, fullName, _id } = doctor;
           const { hospitalPdNumber, name } = hospital;
           const schedule = {
-            doctor: {
-              value: doctorPdNumber,
-              label: `${fullName}(${doctorPdNumber})`,
-              id: _id
-            },
-            hospital: {
-              value: hospitalPdNumber,
-              label: `${name}(${hospitalPdNumber})`,
-              id: hospitalId
-            },
-            weekday: { value: weekday, label: weekday.toUpperCase() },
+            doctor: `${fullName} (${doctorPdNumber})`,
+            hospital: `${name} (${hospitalPdNumber})`,
+            weekday: weekday.toUpperCase(),
             fromTime: startTime,
-            toTime: endTime
+            toTime: endTime,
+            isFastrack: !utils.isNullOrEmpty(
+              tokens.filter(value => utils.isEqual(value, tokenValue.FASTRACK))
+            ),
+            tokens
           };
           callback(schedule);
         }

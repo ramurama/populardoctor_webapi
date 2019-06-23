@@ -21,6 +21,7 @@ const AsyncLock = require('async-lock');
 const fs = require('fs');
 const google = require('./google');
 const tokenValue = require('../../constants/fastrackToken');
+const _ = require('underscore');
 
 module.exports = {
   /**
@@ -364,6 +365,51 @@ module.exports = {
         }
       }
     );
+  },
+
+  /**
+   * updateSchedule method is used to update a schedule's tokens
+   *
+   * @param {String} scheduleId
+   * @param {Array of token numbers} deleteTokens
+   * @param {Array of token objects} addTokens
+   * @param {Function} callback
+   */
+  updateSchedule(scheduleId, deleteTokens, addTokens, callback) {
+    scheduleId = mongoose.Types.ObjectId(scheduleId);
+    Schedule.findOne({ _id: scheduleId }, (err, schedule) => {
+      if (err) {
+        callback(false);
+      } else {
+        const previousTokens = Object.assign(schedule.tokens);
+        console.log(previousTokens);
+        //delete tokens
+        let newTokens = _.reject(previousTokens, previousToken => {
+          return deleteTokens.includes(previousToken.number);
+        });
+        //add tokens
+        newTokens = [...newTokens, ...addTokens];
+
+        //save the tokens
+        Schedule.updateOne(
+          { _id: scheduleId },
+          {
+            $set: {
+              tokens: newTokens
+            }
+          },
+          (err, raw) => {
+            if (err) {
+              console.log(err);
+              callback(false);
+            } else {
+              console.log(raw);
+              callback(true);
+            }
+          }
+        );
+      }
+    });
   },
 
   /**

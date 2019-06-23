@@ -91,6 +91,14 @@ module.exports = (app, uploader) => {
     });
   });
 
+  app.put(routes.UPDATE_SCHEDULE + '/:scheduleId', (req, res) => {
+    const { scheduleId } = req.params;
+    const { deleteTokens, addTokens } = req.body;
+    adminService.updateSchedule(scheduleId, deleteTokens, addTokens, status => {
+      res.send({ status });
+    });
+  });
+
   app.delete(routes.DELETE_TOKEN + '/:scheduleId/:tokenNumber', (req, res) => {
     const { scheduleId, tokenNumber } = req.params;
     adminService.deleteToken(scheduleId, tokenNumber, status => {

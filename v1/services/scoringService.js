@@ -48,17 +48,28 @@ module.exports = {
                 bookingLocation: '$latLng',
                 hospitalLocation: '$hospitalDetails.latLng',
                 bookedTimeStamp: '$bookedTimeStamp',
-                startTimeStamp: '$startTimeStamp'
+                startTimeStamp: '$startTimeStamp',
+                scheduleId: '$scheduleId'
               }
             }
           }
         }
       ],
       (err, data) => {
-        console.log(JSON.stringify(data));
         let drBookings = data.map(drbooking => {
-          
-        })
+          //****************************************
+          //trust computation per doctor
+          const userGrouped = _.groupBy(drbooking.bookings, 'userId');
+          const userTrustScores = Object.values(userGrouped).map(bookings =>
+            _computeTrust(bookings.length)
+          );
+          const trust = userTrustScores.reduce(
+            (accumulatedTrust, currentrust) => accumulatedTrust + currentrust
+          );
+          //****************************************
+
+          // console.log(_.groupBy(drbooking.bookings, 'tokenDate'));
+        });
       }
     );
   }
@@ -103,7 +114,7 @@ function _computeTrust(count) {
   const { visits, points } = config.trust;
   const { v1, v2, v3, v4 } = visits;
   const { p1, p2, p3, p4 } = points;
-  let totalTrust = p1; //1 booking = 1 point
+  let totalTrust = count * p1; //1 booking = 1 point
 
   if (count === v4) {
     totalTrust += p4;
@@ -114,13 +125,39 @@ function _computeTrust(count) {
     }
   }
 
-  if (count === v3) {
+  if (count >= v3) {
     totalTrust += p3;
   }
 
-  if (count === v2) {
+  if (count >= v2) {
     totalTrust += p2;
   }
 
   return totalTrust;
 }
+
+// function _computeTrust(count) {
+//   const { visits, points } = config.trust;
+//   const { v1, v2, v3, v4 } = visits;
+//   const { p1, p2, p3, p4 } = points;
+//   let totalTrust = p1; //1 booking = 1 point
+
+//   if (count === v4) {
+//     totalTrust += p4;
+//   } else if (count > v4) {
+//     const remainder = (count - v4) % v2;
+//     if (remainder == 0) {
+//       totalTrust += p4;
+//     }
+//   }
+
+//   if (count === v3) {
+//     totalTrust += p3;
+//   }
+
+//   if (count === v2) {
+//     totalTrust += p2;
+//   }
+
+//   return totalTrust;
+// }

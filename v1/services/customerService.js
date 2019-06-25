@@ -18,7 +18,8 @@ const CronJob = require('cron').CronJob;
 const operations = require('../../constants/operation');
 const AsyncLock = require('async-lock');
 
-const BOOKING_TIME_LIMIT = 4; //4 hours
+const BOOKING_TIME_LIMIT = require('../../config/booking.json')
+  .bookingStartLimit;
 
 module.exports = {
   /**

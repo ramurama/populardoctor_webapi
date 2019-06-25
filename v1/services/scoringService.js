@@ -81,12 +81,18 @@ module.exports = {
           );
 
           //****************************************
+          // schedule booking speed computation per doctor
+          //grouping by tokendate
           const tokenDateGrouped = _.groupBy(drbookings.bookings, 'tokenDate');
           Object.values(tokenDateGrouped).map(booking => {
+            //grouping by schedule for a particular token date
             const scheduleGrouped = _.groupBy(booking, 'scheduleId');
             const scheduleBookingRates = Object.values(scheduleGrouped).map(
               bookings => {
+                //bookings beloging to a particular schedule in a particular token date
                 const bookingRates = bookings.map(booking => {
+                  //compare booking open time (start time - booking limit) and booked time
+                  // find the difference in seconds and return as array
                   const startTimeMoment = moment(
                     booking.startTimeStamp
                   ).subtract(BOOKING_START_TIME_LIMIT, 'hours');
@@ -95,15 +101,17 @@ module.exports = {
                     .duration(bookedTimeMoment.diff(startTimeMoment))
                     .asSeconds();
                 });
+                //compute the average booking rate for all the bookings made for a particular schedule in  a particular token date
                 const length = bookingRates.length;
                 const sumBookingRates = bookingRates.reduce(
                   (accumulatedValue, currentValue) =>
                     accumulatedValue + currentValue
                 );
-                const avgBookingRates = Math.round(sumBookingRates / length);
-                return avgBookingRates;
+                //return the average
+                return Math.round(sumBookingRates / length);
               }
             );
+            //compute scores for each of the average booking rate
             console.log(scheduleBookingRates);
           });
         });

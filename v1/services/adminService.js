@@ -401,10 +401,10 @@ module.exports = {
           (err, raw) => {
             if (err) {
               console.log(err);
-              callback(false);
+              callback(false, 'Error updating schedule');
             } else {
               console.log(raw);
-              callback(true);
+              callback(true, 'Schedule updated successfully');
             }
           }
         );
@@ -1244,11 +1244,11 @@ module.exports = {
           (err, raw) => {
             if (err) {
               console.log(err);
-              callback(false);
+              callback(false, 'Error updating doctor');
             } else {
               console.log(raw);
               console.log('Doctor details update successfully.');
-              callback(true);
+              callback(true, 'Doctor updated successfully');
             }
           }
         );
@@ -1279,11 +1279,11 @@ module.exports = {
       (err, raw) => {
         if (err) {
           console.log(err);
-          callback(false);
+          callback(false, 'Error updating hospital');
         } else {
           console.log('Hospital details updated successfully.');
           console.log(raw);
-          callback(true);
+          callback(true, 'Hospital updated successfully');
         }
       }
     );

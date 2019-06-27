@@ -94,9 +94,14 @@ module.exports = (app, uploader) => {
   app.put(routes.UPDATE_SCHEDULE + '/:scheduleId', (req, res) => {
     const { scheduleId } = req.params;
     const { deleteTokens, addTokens } = req.body;
-    adminService.updateSchedule(scheduleId, deleteTokens, addTokens, status => {
-      res.send({ status });
-    });
+    adminService.updateSchedule(
+      scheduleId,
+      deleteTokens,
+      addTokens,
+      (status, message) => {
+        res.send({ status, message });
+      }
+    );
   });
 
   app.delete(routes.DELETE_TOKEN + '/:scheduleId/:tokenNumber', (req, res) => {
@@ -180,15 +185,15 @@ module.exports = (app, uploader) => {
 
   app.put(routes.UPDATE_DOCTOR + '/:doctorId', (req, res) => {
     const { doctorId } = req.params;
-    adminService.updateDoctor(doctorId, req.body, status => {
-      res.send({ status });
+    adminService.updateDoctor(doctorId, req.body, (status, message) => {
+      res.send({ status, message });
     });
   });
 
   app.put(routes.UPDATE_HOSPITAL + '/:hospitalId', (req, res) => {
     const { hospitalId } = req.params;
-    adminService.updateHospital(hospitalId, req.body, status => {
-      res.send({ status });
+    adminService.updateHospital(hospitalId, req.body, (status, message) => {
+      res.send({ status, message });
     });
   });
 

@@ -61,108 +61,122 @@ module.exports = {
       ],
       (err, data) => {
         data.map(drbookings => {
-          //****************************************
-          //trust computation per doctor
-          const userGrouped = _.groupBy(drbookings.bookings, 'userId');
-          const userTrustScores = Object.values(userGrouped).map(bookings =>
-            _computeTrust(bookings.length)
+          const trustPromise = _computeTrustPerDoctor(drbookings.bookings);
+          const popularityPromise = _computePopularityPerDoctor(
+            drbookings.bookings
           );
-          const trust = userTrustScores.reduce(
-            (accumulatedTrust, currentTrust) => accumulatedTrust + currentTrust
-          );
-          console.log('Trust -- ' + trust);
-          //****************************************
-          // popularity scores computation per doctor
-          const popularityScores = drbookings.bookings.map(booking =>
-            _computePopularity(booking.distanceMatrix)
-          );
-          const popularity = popularityScores.reduce(
-            (accumulatedPopularity, currentPopularity) =>
-              accumulatedPopularity + currentPopularity
-          );
-          console.log('Popularity -- ' + popularity);
-          //****************************************
-          // schedule booking speed computation per doctor
-          //grouping by tokendate
-          const tokenDateGrouped = _.groupBy(drbookings.bookings, 'tokenDate');
-          let scheduleGroupedRates = Object.values(tokenDateGrouped).map(
-            booking => {
-              //grouping by schedule for a particular token date
-              const scheduleGrouped = _.groupBy(booking, 'scheduleId');
-              const scheduleBookingRates = Object.values(scheduleGrouped).map(
-                bookings => {
-                  //bookings beloging to a particular schedule in a particular token date
-                  const bookingRates = bookings.map(booking => {
-                    //compare booking open time (start time - booking limit) and booked time
-                    // find the difference in seconds and return as array
-                    const startTimeMoment = moment(
-                      booking.startTimeStamp
-                    ).subtract(BOOKING_START_TIME_LIMIT, 'hours');
-                    const bookedTimeMoment = moment(booking.bookedTimeStamp);
-                    return moment
-                      .duration(bookedTimeMoment.diff(startTimeMoment))
-                      .asSeconds();
-                  });
-                  //compute the average booking rate for all the bookings made for a particular schedule in  a particular token date
-                  const length = bookingRates.length;
-                  const sumBookingRates = bookingRates.reduce(
-                    (accumulatedValue, currentValue) =>
-                      accumulatedValue + currentValue
-                  );
-                  //return the average
-                  return Math.round(sumBookingRates / length);
+          const schedulePromise = _computeSchedulePeDoctor(drbookings.bookings);
+          Promise.all([trustPromise, popularityPromise, schedulePromise])
+            .then(data => {
+              const trust = data[0];
+              const popularity = data[1];
+              const schedule = data[2];
+              const total = trust + popularity + schedule;
+
+              Scores.updateOne(
+                { doctorId: drbookings._id },
+                {
+                  $set: {
+                    trust,
+                    popularity,
+                    schedule,
+                    total
+                  }
+                },
+                (err, raw) => {
+                  console.log(raw);
                 }
               );
-              return scheduleBookingRates;
-            }
-          );
-          scheduleGroupedRates = Object.values(flat(scheduleGroupedRates));
-          const scheduleScores = scheduleGroupedRates.map(rate =>
-            _computeScheduleScore(rate)
-          );
-          const schedule = scheduleScores.reduce(
-            (accumulatedScheduleScore, currentScheduleScore) =>
-              accumulatedScheduleScore + currentScheduleScore
-          );
-          console.log('Schedule -- ' + schedule);
+            })
+            .catch(err => {
+              console.error(err);
+            });
         });
       }
     );
   }
 };
 
-async function _computeScores(booking) {
-  const { doctorId, userId, bookingLocation, hospitalLocation } = booking;
-  const scores = await _fetchScoresForDoctor(doctorId);
-
-  //trust computation
-  const recurringCount = await _findTrustByUser(doctorId, userId);
-  const trust = scores.trust + _computeTrust(recurringCount);
-
-  //popularity computation
-}
-
-function _findTrustByUser(doctorId, userId) {
+/**
+ *
+ * @param {Array} bookings
+ */
+function _computeTrustPerDoctor(bookings) {
   return new Promise((resolve, reject) => {
-    Bookings.count({ doctorId, userId }, (err, count) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(count);
-      }
-    });
+    const userGrouped = _.groupBy(bookings, 'userId');
+    const userTrustScores = Object.values(userGrouped).map(bookings =>
+      _computeTrust(bookings.length)
+    );
+    const trust = userTrustScores.reduce(
+      (accumulatedTrust, currentTrust) => accumulatedTrust + currentTrust
+    );
+    resolve(trust);
   });
 }
 
-function _fetchScoresForDoctor(doctorId) {
+/**
+ *
+ * @param {Array} bookings
+ */
+function _computePopularityPerDoctor(bookings) {
   return new Promise((resolve, reject) => {
-    Scores.findOne({ doctorId }, (err, doctorScore) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(doctorScore);
-      }
+    const popularityScores = bookings.map(booking =>
+      _computePopularity(booking.distanceMatrix)
+    );
+    const popularity = popularityScores.reduce(
+      (accumulatedPopularity, currentPopularity) =>
+        accumulatedPopularity + currentPopularity
+    );
+    resolve(popularity);
+  });
+}
+
+/**
+ *
+ * @param {Array} bookings
+ */
+function _computeSchedulePeDoctor(bookings) {
+  return new Promise((resolve, reject) => {
+    //grouping by tokendate
+    const tokenDateGrouped = _.groupBy(bookings, 'tokenDate');
+    let scheduleGroupedRates = Object.values(tokenDateGrouped).map(booking => {
+      //grouping by schedule for a particular token date
+      const scheduleGrouped = _.groupBy(booking, 'scheduleId');
+      const scheduleBookingRates = Object.values(scheduleGrouped).map(
+        bookings => {
+          //bookings beloging to a particular schedule in a particular token date
+          const bookingRates = bookings.map(booking => {
+            //compare booking open time (start time - booking limit) and booked time
+            // find the difference in seconds and return as array
+            const startTimeMoment = moment(booking.startTimeStamp).subtract(
+              BOOKING_START_TIME_LIMIT,
+              'hours'
+            );
+            const bookedTimeMoment = moment(booking.bookedTimeStamp);
+            return moment
+              .duration(bookedTimeMoment.diff(startTimeMoment))
+              .asSeconds();
+          });
+          //compute the average booking rate for all the bookings made for a particular schedule in  a particular token date
+          const length = bookingRates.length;
+          const sumBookingRates = bookingRates.reduce(
+            (accumulatedValue, currentValue) => accumulatedValue + currentValue
+          );
+          //return the average
+          return Math.round(sumBookingRates / length);
+        }
+      );
+      return scheduleBookingRates;
     });
+    scheduleGroupedRates = Object.values(flat(scheduleGroupedRates));
+    const scheduleScores = scheduleGroupedRates.map(rate =>
+      _computeScheduleScore(rate)
+    );
+    const schedule = scheduleScores.reduce(
+      (accumulatedScheduleScore, currentScheduleScore) =>
+        accumulatedScheduleScore + currentScheduleScore
+    );
+    resolve(schedule);
   });
 }
 
@@ -227,29 +241,3 @@ function _computeScheduleScore(rate) {
   }
   return scheduleScore;
 }
-
-// function _computeTrust(count) {
-//   const { visits, points } = config.trust;
-//   const { v1, v2, v3, v4 } = visits;
-//   const { p1, p2, p3, p4 } = points;
-//   let totalTrust = p1; //1 booking = 1 point
-
-//   if (count === v4) {
-//     totalTrust += p4;
-//   } else if (count > v4) {
-//     const remainder = (count - v4) % v2;
-//     if (remainder == 0) {
-//       totalTrust += p4;
-//     }
-//   }
-
-//   if (count === v3) {
-//     totalTrust += p3;
-//   }
-
-//   if (count === v2) {
-//     totalTrust += p2;
-//   }
-
-//   return totalTrust;
-// }

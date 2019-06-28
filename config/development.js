@@ -3,5 +3,6 @@ module.exports = {
   cookieKey: 'qeyipadhkzcbm',
   jwtKey: 'qeyipadhkzcbn',
   googleProjectId: 'popular-doctor',
-  googleStorageBuckectName: 'populardoctor-profileimages'
+  googleStorageBuckectName: 'populardoctor-profileimages',
+  googleMapsKey: 'AIzaSyClwDcHno4MWm4dz8CH7yTG6obxC7npXZs'
 };

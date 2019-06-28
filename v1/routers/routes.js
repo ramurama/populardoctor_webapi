@@ -46,6 +46,7 @@ module.exports = {
   UPDATE_HOSPITAL: '/api/v1/admin/updateHospital',
   GET_SCHEDULES: '/api/v1/admin/getSchedules',
   GET_SCHEDULE_DETAILS: '/api/v1/admin/getScheduleDetails',
+  UPDATE_SCHEDULE: '/api/v1/admin/updateSchedule',
   GET_SCHEDULE_HOSPITALS: '/api/v1/admin/getScheduleHospitals',
   GET_SCHEDULE_DOCTORS: '/api/v1/admin/getScheduleDoctors',
   GET_ANNOUNCEMENTS: '/api/v1/admin/getAnnouncements',
@@ -88,5 +89,8 @@ module.exports = {
   VERIFY_BOOKING_OTP_FD: '/api/v1/frontdesk/verifyBookingOtp',
   GET_FD_BOOKING_STATUS: '/api/v1/frontdesk/getBookingStatus',
   GET_CONFIRMED_SCHEDULES_FD: '/api/v1/frontdesk/getConfirmedSchedules',
-  BLOCK_SCHEDULE_FD: '/api/v1/frontdesk/blockSchedule'
+  BLOCK_SCHEDULE_FD: '/api/v1/frontdesk/blockSchedule',
+
+  //scoring engine
+  SCORING_ENGINE_RUN: '/api/v1/scoringEngine/run'
 };

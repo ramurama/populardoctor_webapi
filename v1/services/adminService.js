@@ -11,6 +11,7 @@ const Announcement = mongoose.model(modelNames.ANNOUNCEMENTS);
 const DoctorPdNumber = mongoose.model(modelNames.DOCTOR_PD_NUMBER);
 const HospitalPdNumber = mongoose.model(modelNames.HOSPITAL_PD_NUMBER);
 const UserSupport = mongoose.model(modelNames.USER_SUPPORT);
+const Scores = mongoose.model(modelNames.SCORES);
 const bcrypt = require('bcrypt-nodejs');
 const passwordConfig = require('../../config/password');
 const userType = require('../../constants/userType');
@@ -19,6 +20,8 @@ const utils = require('../utils');
 const AsyncLock = require('async-lock');
 const fs = require('fs');
 const google = require('./google');
+const tokenValue = require('../../constants/fastrackToken');
+const _ = require('underscore');
 
 module.exports = {
   /**
@@ -71,13 +74,15 @@ module.exports = {
             doctor.doctorPdNumber = await _getDoctorPdNumber();
             Doctor.collection
               .save(doctor)
-              .then(res =>
+              .then(res => {
+                //create an entry for scores collection
+                _createScoresRecord(doctor._id);
                 callback(
                   true,
                   'Doctor created successfully.',
                   doctor.doctorPdNumber
-                )
-              )
+                );
+              })
               .catch(err => console.log('***** Error saving doctor. ' + err));
           })
           .catch(err =>
@@ -334,10 +339,77 @@ module.exports = {
         if (err) {
           callback({});
         } else {
-          callback(schedules[0]);
+          const {
+            hospital,
+            doctor,
+            hospitalId,
+            weekday,
+            startTime,
+            endTime,
+            tokens
+          } = schedules[0];
+          const { doctorPdNumber, fullName, _id } = doctor;
+          const { hospitalPdNumber, name } = hospital;
+          const schedule = {
+            doctor: `${fullName} (${doctorPdNumber})`,
+            hospital: `${name} (${hospitalPdNumber})`,
+            weekday: weekday.toUpperCase(),
+            fromTime: startTime,
+            toTime: endTime,
+            isFastrack: !utils.isNullOrEmpty(
+              tokens.filter(value => utils.isEqual(value, tokenValue.FASTRACK))
+            ),
+            tokens
+          };
+          callback(schedule);
         }
       }
     );
+  },
+
+  /**
+   * updateSchedule method is used to update a schedule's tokens
+   *
+   * @param {String} scheduleId
+   * @param {Array of token numbers} deleteTokens
+   * @param {Array of token objects} addTokens
+   * @param {Function} callback
+   */
+  updateSchedule(scheduleId, deleteTokens, addTokens, callback) {
+    scheduleId = mongoose.Types.ObjectId(scheduleId);
+    Schedule.findOne({ _id: scheduleId }, (err, schedule) => {
+      if (err) {
+        callback(false);
+      } else {
+        const previousTokens = Object.assign(schedule.tokens);
+        console.log(previousTokens);
+        //delete tokens
+        let newTokens = _.reject(previousTokens, previousToken => {
+          return deleteTokens.includes(previousToken.number);
+        });
+        //add tokens
+        newTokens = [...newTokens, ...addTokens];
+
+        //save the tokens
+        Schedule.updateOne(
+          { _id: scheduleId },
+          {
+            $set: {
+              tokens: newTokens
+            }
+          },
+          (err, raw) => {
+            if (err) {
+              console.log(err);
+              callback(false, 'Error updating schedule');
+            } else {
+              console.log(raw);
+              callback(true, 'Schedule updated successfully');
+            }
+          }
+        );
+      }
+    });
   },
 
   /**
@@ -1172,11 +1244,11 @@ module.exports = {
           (err, raw) => {
             if (err) {
               console.log(err);
-              callback(false);
+              callback(false, 'Error updating doctor');
             } else {
               console.log(raw);
               console.log('Doctor details update successfully.');
-              callback(true);
+              callback(true, 'Doctor updated successfully');
             }
           }
         );
@@ -1207,11 +1279,11 @@ module.exports = {
       (err, raw) => {
         if (err) {
           console.log(err);
-          callback(false);
+          callback(false, 'Error updating hospital');
         } else {
           console.log('Hospital details updated successfully.');
           console.log(raw);
-          callback(true);
+          callback(true, 'Hospital updated successfully');
         }
       }
     );
@@ -1444,18 +1516,27 @@ module.exports = {
             doctorPdNumber,
             userDetails
           } = doctors[0];
+          const {
+            username,
+            fullName,
+            profileImage,
+            gender,
+            dateOfBirth
+          } = userDetails;
 
           callback({
             doctorId: _id,
             userId,
-            specialization,
+            specialization: { label: specialization, value: specialization },
             yearsOfExperience,
             degree,
             profileContent,
             doctorPdNumber,
-            mobile: userDetails.username,
-            fullName: userDetails.fullName,
-            profileImage: userDetails.profileImage
+            mobile: username,
+            fullName,
+            profileImage,
+            gender: { label: gender, value: gender },
+            dateOfBirth
           });
         }
       }
@@ -1811,4 +1892,30 @@ function _getMasterFrontdeskUsers() {
       }
     );
   });
+}
+
+/**
+ * _createScoresRecord method creates an entry in the scores collection
+ *
+ * @param {ObjectId} doctorId
+ */
+function _createScoresRecord(doctorId) {
+  let scores = new Scores();
+  scores.doctorId = doctorId;
+  scores.trust = 0;
+  scores.popularity = 0;
+  scores.schedule = 0;
+  scores.total = 0;
+  Scores.collection
+    .save(scores)
+    .then(res => {})
+    .catch(err =>
+      console.error(
+        `***** Error creating scores record for doctor with _id: ${
+          doctor._id
+        }` +
+          ' ' +
+          err
+      )
+    );
 }

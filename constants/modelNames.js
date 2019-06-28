@@ -14,5 +14,6 @@ module.exports = {
   FRONTDESK_USER: 'frontdesk_users',
   ANNOUNCEMENTS: 'announcements',
   DOCTOR_PD_NUMBER: 'doctor_pd_numbers',
-  HOSPITAL_PD_NUMBER: 'hospital_pd_numbers'
+  HOSPITAL_PD_NUMBER: 'hospital_pd_numbers',
+  SCORES: 'scores'
 };

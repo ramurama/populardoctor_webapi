@@ -18,7 +18,8 @@ const CronJob = require('cron').CronJob;
 const operations = require('../../constants/operation');
 const AsyncLock = require('async-lock');
 
-const BOOKING_TIME_LIMIT = 4; //4 hours
+const BOOKING_TIME_LIMIT = require('../../config/booking.json')
+  .bookingStartLimit;
 
 module.exports = {
   /**
@@ -436,18 +437,23 @@ module.exports = {
           tokenDate
         );
         const { startTime, endTime } = tokenTableDoc;
-        const startTimeStamp = utils
+
+        //compute start time and save as string
+        let startTimeStamp = utils
           .getDateTime(tokenDate, startTime)
           .subtract(BOOKING_TIME_LIMIT, 'hours')
           .toDate();
-        const endTimeStamp = utils.getDateTime(tokenDate, endTime).toDate();
+        startTimeStamp = utils.getIstString(startTimeStamp);
+
+        //compute end time and save as string
+        let endTimeStamp = utils.getDateTime(tokenDate, endTime).toDate();
+        endTimeStamp = utils.getIstString(endTimeStamp);
+
         const selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
         delete selectedToken.status;
 
         const bookingId = await _getAutoNumber();
-        const bookedTimeStamp = moment(new Date())
-          .tz('Asia/Calcutta')
-          .format();
+        const bookedTimeStamp = utils.getIstString(new Date());
         Booking.collection
           .insertOne({
             bookingId,

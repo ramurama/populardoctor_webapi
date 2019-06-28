@@ -68,6 +68,10 @@ const bookingSchema = new Schema({
   },
   suggestions: {
     type: 'string'
+  },
+  distanceMatrix: {
+    type: Number,
+    required: false
   }
 });
 

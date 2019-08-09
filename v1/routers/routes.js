@@ -22,6 +22,7 @@ module.exports = {
   CREATE_SPECIALIZATION: '/api/v1/admin/createSpecialization',
   CREATE_DOCTOR: '/api/v1/admin/createDoctor',
   UPLOAD_DOCTOR_PROFILE_IMAGE: '/api/v1/admin/uploadDoctorProfileImage',
+  DELETE_DOCTOR_PROFILE_IMAGE: '/api/v1/admin/deleteDoctorProfileImage',
   CREATE_HOSPITAL: '/api/v1/admin/createHospital',
   CREATE_SCHEDULE: '/api/v1/admin/createSchedule',
   GET_DR_FRONTDESK_USER: '/api/v1/admin/getDoctorFrontdeskUser',

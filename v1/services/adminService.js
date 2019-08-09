@@ -125,6 +125,49 @@ module.exports = {
     });
   },
 
+  deleteProfileImage(doctorPdNumber, callback) {
+    Doctor.aggregate([
+      {
+        $match: {
+          doctorPdNumber
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'doctorDetails'
+        }
+      },
+      {
+        $unwind: '$doctorDetails'
+      }
+    ])
+      .then(data => {
+        const { userId, doctorDetails } = data[0];
+        const fileName = doctorDetails.profileImage.split('/')[4];
+        google.deleteFile(fileName, status => {
+          User.updateOne(
+            { _id: mongoose.Types.ObjectId(userId) },
+            { $set: { profileImage: null } },
+            (err, raw) => {
+              if (!err) {
+                console.log(raw);
+                callback(status);
+              } else {
+                console.log(raw);
+                callback(false);
+              }
+            }
+          );
+        });
+      })
+      .catch(err => {
+        console.log(err);
+      });
+  },
+
   /**
    * createHospital method adds a document to the Hospital collection.
    * Also, if the hospital's location will be added to the DB if the location

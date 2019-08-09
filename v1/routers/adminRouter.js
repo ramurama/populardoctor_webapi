@@ -26,6 +26,16 @@ module.exports = (app, uploader) => {
     }
   );
 
+  app.delete(
+    routes.DELETE_DOCTOR_PROFILE_IMAGE + '/:doctorPdNumber',
+    (req, res) => {
+      const doctorPdNumber = req.params.doctorPdNumber;
+      adminService.deleteProfileImage(doctorPdNumber, status => {
+        res.send({ status });
+      });
+    }
+  );
+
   app.post(routes.CREATE_HOSPITAL, (req, res) => {
     adminService.createHospital(req.body, (status, message) => {
       res.send({ status, message });

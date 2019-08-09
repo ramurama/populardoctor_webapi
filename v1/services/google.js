@@ -32,6 +32,18 @@ module.exports = {
       .catch(err => {
         return err;
       });
+  },
+
+  deleteFile(filename, callback) {
+    bucket
+      .file(filename)
+      .delete()
+      .then(data => {
+        callback(true);
+      })
+      .catch(err => {
+        console.log(err);
+      });
   }
 };
 

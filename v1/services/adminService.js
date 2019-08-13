@@ -177,7 +177,8 @@ module.exports = {
    * @param {Function} callback
    */
   async createHospital(hospitalData, callback) {
-    const { name, address, location, pincode, landmark } = hospitalData;
+    const { name, address, location, pincode, landmark, latLng } = hospitalData;
+    console.log(hospitalData);
     try {
       const hospitalPdNumber = await _getHospitalPdNumber();
       //hospital document
@@ -188,6 +189,7 @@ module.exports = {
       hospital.pincode = pincode;
       hospital.landmark = landmark;
       hospital.hospitalPdNumber = hospitalPdNumber;
+      hospital.latLng = latLng;
       Hospital.collection
         .insertOne(hospital)
         .then(async res => {
@@ -1307,7 +1309,7 @@ module.exports = {
    * @param {Function} callback
    */
   updateHospital(hospitalId, data, callback) {
-    const { name, address, pincode, landmark } = data;
+    const { name, address, pincode, landmark, latLng } = data;
 
     Hospital.updateOne(
       { _id: mongoose.Types.ObjectId(hospitalId) },
@@ -1316,7 +1318,8 @@ module.exports = {
           name,
           address,
           pincode,
-          landmark
+          landmark,
+          latLng
         }
       },
       (err, raw) => {

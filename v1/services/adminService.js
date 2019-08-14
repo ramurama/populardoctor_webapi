@@ -396,6 +396,7 @@ module.exports = {
           const { doctorPdNumber, fullName, _id } = doctor;
           const { hospitalPdNumber, name } = hospital;
           const schedule = {
+            id: scheduleId,
             doctor: `${fullName} (${doctorPdNumber})`,
             hospital: `${name} (${hospitalPdNumber})`,
             weekday: weekday.toUpperCase(),
@@ -1582,7 +1583,7 @@ module.exports = {
             fullName,
             profileImage,
             gender: { label: gender, value: gender },
-            dateOfBirth
+            dateOfBirth: new Date(dateOfBirth)
           });
         }
       }

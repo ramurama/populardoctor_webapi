@@ -372,6 +372,7 @@ module.exports = {
     try {
       const status = await _confirmVisit(bookingId);
       if (status) {
+        //compute distance matrix 
         callback(true);
       } else {
         callback(false);

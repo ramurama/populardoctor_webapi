@@ -22,6 +22,10 @@ const hospitalSchema = new Schema({
     required: true,
     index: true
   },
+  latLng: {
+    type: 'array',
+    required: true
+  },
   landmark: {
     type: 'string',
     required: true

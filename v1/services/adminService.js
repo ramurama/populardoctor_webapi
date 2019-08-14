@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const modelNames = require('../constants/modelNames');
+const modelNames = require('../../constants/modelNames');
 const User = mongoose.model(modelNames.USERS);
 const Doctor = mongoose.model(modelNames.DOCTOR);
 const Specialization = mongoose.model(modelNames.SPECIALIZATION);
@@ -7,14 +7,21 @@ const Hospital = mongoose.model(modelNames.HOSPITAL);
 const Location = mongoose.model(modelNames.LOCATION);
 const Schedule = mongoose.model(modelNames.SCHEDULE);
 const Booking = mongoose.model(modelNames.BOOKING);
+const Announcement = mongoose.model(modelNames.ANNOUNCEMENTS);
 const DoctorPdNumber = mongoose.model(modelNames.DOCTOR_PD_NUMBER);
 const HospitalPdNumber = mongoose.model(modelNames.HOSPITAL_PD_NUMBER);
+const UserSupport = mongoose.model(modelNames.USER_SUPPORT);
+const Scores = mongoose.model(modelNames.SCORES);
 const bcrypt = require('bcrypt-nodejs');
 const passwordConfig = require('../../config/password');
-const userType = require('../constants/userType');
-const activationStatus = require('../constants/activationStatus');
+const userType = require('../../constants/userType');
+const activationStatus = require('../../constants/activationStatus');
 const utils = require('../utils');
 const AsyncLock = require('async-lock');
+const fs = require('fs');
+const google = require('./google');
+const tokenValue = require('../../constants/fastrackToken');
+const _ = require('underscore');
 
 module.exports = {
   /**
@@ -34,7 +41,6 @@ module.exports = {
       specialization,
       yearsOfExperience,
       degree,
-      profileImage,
       profileContent
     } = doctorData;
 
@@ -49,7 +55,7 @@ module.exports = {
         user.fullName = fullName;
         user.dateOfBirth = dateOfBirth;
         user.gender = gender;
-        user.profileImage = profileImage;
+        // user.profileImage = profileImage;
         user.password = bcrypt.hashSync(
           password,
           bcrypt.genSaltSync(passwordConfig.SALT)
@@ -68,19 +74,98 @@ module.exports = {
             doctor.doctorPdNumber = await _getDoctorPdNumber();
             Doctor.collection
               .save(doctor)
-              .then(res => callback(true, 'Doctor created successfully.'))
+              .then(res => {
+                //create an entry for scores collection
+                _createScoresRecord(doctor._id);
+                callback(
+                  true,
+                  'Doctor created successfully.',
+                  doctor.doctorPdNumber
+                );
+              })
               .catch(err => console.log('***** Error saving doctor. ' + err));
           })
           .catch(err =>
             console.log('***** Error inserting into user model. ' + err)
           );
       } else {
-        callback(false, 'Entered mobile number already exists!');
+        callback(false, 'Entered mobile number already exists!', null);
       }
     } catch (err) {
       console.log(err);
       callback(false, 'Unkown error!');
     }
+  },
+
+  /**
+   * uploadDoctorProfileImage method is used to upload the image to google storage bucket.
+   * It also performs deletion of the file once it has been successfully uploaded to google
+   * storage bucket.
+   *
+   * @param {String} doctorPdNumber
+   * @param {String} filename
+   * @param {Function} callback
+   */
+  uploadDoctorProfileImage(doctorPdNumber, filename, callback) {
+    google.uploadNewFile(filename, publicUrl => {
+      Doctor.findOne({ doctorPdNumber }, (err, doctor) => {
+        console.log(doctor);
+        User.updateOne(
+          { _id: doctor.userId },
+          { $set: { profileImage: publicUrl } }
+        )
+          .then(raw => {
+            // console.log(raw);
+            fs.unlink(google.localFilePath + filename, () => {
+              callback(true);
+            });
+          })
+          .catch(err => console.log(err));
+      });
+    });
+  },
+
+  deleteProfileImage(doctorPdNumber, callback) {
+    Doctor.aggregate([
+      {
+        $match: {
+          doctorPdNumber
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'doctorDetails'
+        }
+      },
+      {
+        $unwind: '$doctorDetails'
+      }
+    ])
+      .then(data => {
+        const { userId, doctorDetails } = data[0];
+        const fileName = doctorDetails.profileImage.split('/')[4];
+        google.deleteFile(fileName, status => {
+          User.updateOne(
+            { _id: mongoose.Types.ObjectId(userId) },
+            { $set: { profileImage: null } },
+            (err, raw) => {
+              if (!err) {
+                console.log(raw);
+                callback(status);
+              } else {
+                console.log(raw);
+                callback(false);
+              }
+            }
+          );
+        });
+      })
+      .catch(err => {
+        console.log(err);
+      });
   },
 
   /**
@@ -92,7 +177,8 @@ module.exports = {
    * @param {Function} callback
    */
   async createHospital(hospitalData, callback) {
-    const { name, address, location, pincode, landmark } = hospitalData;
+    const { name, address, location, pincode, landmark, latLng } = hospitalData;
+    console.log(hospitalData);
     try {
       const hospitalPdNumber = await _getHospitalPdNumber();
       //hospital document
@@ -103,19 +189,20 @@ module.exports = {
       hospital.pincode = pincode;
       hospital.landmark = landmark;
       hospital.hospitalPdNumber = hospitalPdNumber;
+      hospital.latLng = latLng;
       Hospital.collection
         .insertOne(hospital)
         .then(async res => {
           if (await _isLocationExists(location)) {
             //location already exists in Location collection
-            callback(true);
+            callback(true, 'Hospital created successfully');
           } else {
             //location document
             let locationDoc = new Location();
             locationDoc.name = location;
             locationDoc.collection
               .insertOne(locationDoc)
-              .then(res => callback(true))
+              .then(res => callback(true, 'Hospital created successfully'))
               .catch(err =>
                 console.log(
                   '***** Error inserting document into Location. ' + err
@@ -128,7 +215,7 @@ module.exports = {
         );
     } catch (err) {
       console.log(err);
-      callback(false);
+      callback(false, 'Error creating hospital');
     }
   },
 
@@ -297,10 +384,78 @@ module.exports = {
         if (err) {
           callback({});
         } else {
-          callback(schedules[0]);
+          const {
+            hospital,
+            doctor,
+            hospitalId,
+            weekday,
+            startTime,
+            endTime,
+            tokens
+          } = schedules[0];
+          const { doctorPdNumber, fullName, _id } = doctor;
+          const { hospitalPdNumber, name } = hospital;
+          const schedule = {
+            id: scheduleId,
+            doctor: `${fullName} (${doctorPdNumber})`,
+            hospital: `${name} (${hospitalPdNumber})`,
+            weekday: weekday.toUpperCase(),
+            fromTime: startTime,
+            toTime: endTime,
+            isFastrack: !utils.isNullOrEmpty(
+              tokens.filter(value => utils.isEqual(value, tokenValue.FASTRACK))
+            ),
+            tokens
+          };
+          callback(schedule);
         }
       }
     );
+  },
+
+  /**
+   * updateSchedule method is used to update a schedule's tokens
+   *
+   * @param {String} scheduleId
+   * @param {Array of token numbers} deleteTokens
+   * @param {Array of token objects} addTokens
+   * @param {Function} callback
+   */
+  updateSchedule(scheduleId, deleteTokens, addTokens, callback) {
+    scheduleId = mongoose.Types.ObjectId(scheduleId);
+    Schedule.findOne({ _id: scheduleId }, (err, schedule) => {
+      if (err) {
+        callback(false);
+      } else {
+        const previousTokens = Object.assign(schedule.tokens);
+        console.log(previousTokens);
+        //delete tokens
+        let newTokens = _.reject(previousTokens, previousToken => {
+          return deleteTokens.includes(previousToken.number);
+        });
+        //add tokens
+        newTokens = [...newTokens, ...addTokens];
+
+        //save the tokens
+        Schedule.updateOne(
+          { _id: scheduleId },
+          {
+            $set: {
+              tokens: newTokens
+            }
+          },
+          (err, raw) => {
+            if (err) {
+              console.log(err);
+              callback(false, 'Error updating schedule');
+            } else {
+              console.log(raw);
+              callback(true, 'Schedule updated successfully');
+            }
+          }
+        );
+      }
+    });
   },
 
   /**
@@ -602,141 +757,126 @@ module.exports = {
    * @param {Object} pagination
    * @param {Function} callback
    */
-  getBookingHistory(pagination, callback) {
-    const { size, pageNo } = pagination;
-    if (pageNo < 0 || pageNo === 0) {
-      callback({ status: false, users: [], totalPages: null });
-    } else {
-      const skip = size * (pageNo - 1);
-      const limit = parseInt(size);
-      Booking.aggregate(
-        [
-          {
-            $lookup: {
-              from: 'doctors',
-              localField: 'doctorId',
-              foreignField: '_id',
-              as: 'doctorMainDetails'
-            }
-          },
-          {
-            $unwind: '$doctorMainDetails'
-          },
-          {
-            $lookup: {
-              from: 'users',
-              localField: 'doctorMainDetails.userId',
-              foreignField: '_id',
-              as: 'doctorUserDetails'
-            }
-          },
-          {
-            $unwind: '$doctorUserDetails'
-          },
-          {
-            $addFields: {
-              doctorDetails: {
-                $mergeObjects: ['$doctorMainDetails', '$doctorUserDetails']
-              }
-            }
-          },
-          {
-            $lookup: {
-              from: 'users',
-              localField: 'userId',
-              foreignField: '_id',
-              as: 'userDetails'
-            }
-          },
-          {
-            $unwind: '$userDetails'
-          },
-          {
-            $lookup: {
-              from: 'schedules',
-              localField: 'scheduleId',
-              foreignField: '_id',
-              as: 'scheduleDetails'
-            }
-          },
-          {
-            $unwind: '$scheduleDetails'
-          },
-          {
-            $lookup: {
-              from: 'hospitals',
-              localField: 'scheduleDetails.hospitalId',
-              foreignField: '_id',
-              as: 'hospitalDetails'
-            }
-          },
-          {
-            $unwind: '$hospitalDetails'
-          },
-          {
-            $sort: {
-              bookedTimeStamp: -1
-            }
-          },
-          {
-            $project: {
-              _id: 0,
-              userId: 0,
-              doctorId: 0,
-              scheduleId: 0,
-              token: 0,
-              startTime: 0,
-              endTime: 0,
-              latLng: 0,
-              startTimeStamp: 0,
-              endTimeStamp: 0,
-              doctorMainDetails: 0,
-              doctorUserDetails: 0,
-              scheduleDetails: 0,
-              'doctorDetails._id': 0,
-              'doctorDetails.userId': 0,
-              'doctorDetails.yearsOfExperience': 0,
-              'doctorDetails.degree': 0,
-              'doctorDetails.userType': 0,
-              'doctorDetails.status': 0,
-              'doctorDetails.favorites': 0,
-              'doctorDetails.username': 0,
-              'doctorDetails.password': 0,
-              'doctorDetails.dateOfBirth': 0,
-              'doctorDetails.gender': 0,
-              'doctorDetails.deviceToken': 0,
-              'userDetails._id': 0,
-              'userDetails.username': 0,
-              'userDetails.password': 0,
-              'userDetails.userType': 0,
-              'userDetails.status': 0,
-              'userDetails.userId': 0,
-              'userDetails.dateOfBirth': 0,
-              'userDetails.gender': 0,
-              'userDetails.deviceToken': 0,
-              'userDetails.favorites': 0,
-              'hospitalDetails._id': 0,
-              'hospitalDetails.landmark': 0
-            }
-          },
-          {
-            $skip: skip
-          },
-          {
-            $limit: limit
+  getBookingHistory(callback) {
+    Booking.aggregate(
+      [
+        {
+          $lookup: {
+            from: 'doctors',
+            localField: 'doctorId',
+            foreignField: '_id',
+            as: 'doctorMainDetails'
           }
-        ],
-        async (err, bookings) => {
-          try {
-            const totalRecords = await _getBookingHistoryCount();
-            const totalPages = Math.ceil(totalRecords / limit);
-            callback({ totalPages, totalRecords, bookings });
-          } catch (err) {
-            callback({ totalPages: 0, bookings: [], totalRecords: 0 });
+        },
+        {
+          $unwind: '$doctorMainDetails'
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'doctorMainDetails.userId',
+            foreignField: '_id',
+            as: 'doctorUserDetails'
+          }
+        },
+        {
+          $unwind: '$doctorUserDetails'
+        },
+        {
+          $addFields: {
+            doctorDetails: {
+              $mergeObjects: ['$doctorMainDetails', '$doctorUserDetails']
+            }
+          }
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'userDetails'
+          }
+        },
+        {
+          $unwind: '$userDetails'
+        },
+        {
+          $lookup: {
+            from: 'schedules',
+            localField: 'scheduleId',
+            foreignField: '_id',
+            as: 'scheduleDetails'
+          }
+        },
+        {
+          $unwind: '$scheduleDetails'
+        },
+        {
+          $lookup: {
+            from: 'hospitals',
+            localField: 'scheduleDetails.hospitalId',
+            foreignField: '_id',
+            as: 'hospitalDetails'
+          }
+        },
+        {
+          $unwind: '$hospitalDetails'
+        },
+        {
+          $sort: {
+            bookingTimeStamp: -1
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            userId: 0,
+            doctorId: 0,
+            scheduleId: 0,
+            token: 0,
+            startTime: 0,
+            endTime: 0,
+            latLng: 0,
+            startTimeStamp: 0,
+            endTimeStamp: 0,
+            doctorMainDetails: 0,
+            doctorUserDetails: 0,
+            scheduleDetails: 0,
+            'doctorDetails._id': 0,
+            'doctorDetails.userId': 0,
+            'doctorDetails.yearsOfExperience': 0,
+            'doctorDetails.degree': 0,
+            'doctorDetails.userType': 0,
+            'doctorDetails.status': 0,
+            'doctorDetails.favorites': 0,
+            'doctorDetails.username': 0,
+            'doctorDetails.password': 0,
+            'doctorDetails.dateOfBirth': 0,
+            'doctorDetails.gender': 0,
+            'doctorDetails.deviceToken': 0,
+            'userDetails._id': 0,
+            'userDetails.username': 0,
+            'userDetails.password': 0,
+            'userDetails.userType': 0,
+            'userDetails.status': 0,
+            'userDetails.userId': 0,
+            'userDetails.dateOfBirth': 0,
+            'userDetails.gender': 0,
+            'userDetails.deviceToken': 0,
+            'userDetails.favorites': 0,
+            'hospitalDetails._id': 0,
+            'hospitalDetails.landmark': 0
           }
         }
-      );
-    }
+      ],
+      (err, bookings) => {
+        try {
+          callback(bookings);
+        } catch (err) {
+          callback([]);
+        }
+      }
+    );
   },
 
   /**
@@ -859,7 +999,7 @@ module.exports = {
         if (err) {
           callback({});
         } else {
-          callback(booking);
+          callback(booking[0]);
         }
       }
     );
@@ -966,34 +1106,14 @@ module.exports = {
    *
    * @param {Function} callback
    */
-  getMasterFrontdeskUsers(callback) {
-    User.find(
-      { userType: userType.FRONTDESK },
-      {
-        deviceToken: 0,
-        dateOfBirth: 0,
-        password: 0,
-        favorites: 0,
-        status: 0,
-        userType: 0,
-        userId: 0
-      },
-      (err, users) => {
-        if (err) {
-          callback([]);
-        } else {
-          let frontdeskUsers = users.map(user => {
-            const { _id, username, fullName } = user;
-            return {
-              frontdeskUserId: _id,
-              name: fullName,
-              mobile: username
-            };
-          });
-          callback(frontdeskUsers);
-        }
-      }
-    );
+  async getMasterFrontdeskUsers(callback) {
+    try {
+      const frontdeskUsers = await _getMasterFrontdeskUsers();
+      callback(frontdeskUsers);
+    } catch (err) {
+      callback([]);
+      console.error(err);
+    }
   },
 
   /**
@@ -1022,8 +1142,12 @@ module.exports = {
 
         User.collection
           .insertOne(user)
-          .then(res => {
-            callback(true, 'Frontdesk user create successfully.');
+          .then(async res => {
+            callback(
+              true,
+              'Frontdesk user create successfully.',
+              await _getMasterFrontdeskUsers()
+            );
           })
           .catch(err => console.log('Error creating frontdesk user. ' + err));
       } else {
@@ -1043,28 +1167,6 @@ module.exports = {
    * @param {Function} callback
    */
   async linkFrontdeskUser(data, callback) {
-    const { doctorId, hospitalId, frontdeskUserId } = data;
-    try {
-      let status = await _updateScheduleFrontdeskUser(
-        hospitalId,
-        doctorId,
-        frontdeskUserId
-      );
-      callback(status);
-    } catch (err) {
-      console.log(err);
-      callback(false);
-    }
-  },
-
-  /**
-   * updateFrontdeskUser method updates the frontdesk user for the
-   * given combination of doctorId and hospitalId
-   *
-   * @param {Oject} data
-   * @param {Function} callback
-   */
-  async updateFrontdeskUser(data, callback) {
     const { doctorId, hospitalId, frontdeskUserId } = data;
     try {
       let status = await _updateScheduleFrontdeskUser(
@@ -1188,11 +1290,11 @@ module.exports = {
           (err, raw) => {
             if (err) {
               console.log(err);
-              callback(false);
+              callback(false, 'Error updating doctor');
             } else {
               console.log(raw);
               console.log('Doctor details update successfully.');
-              callback(true);
+              callback(true, 'Doctor updated successfully');
             }
           }
         );
@@ -1208,7 +1310,7 @@ module.exports = {
    * @param {Function} callback
    */
   updateHospital(hospitalId, data, callback) {
-    const { name, address, pincode, landmark } = data;
+    const { name, address, pincode, landmark, latLng } = data;
 
     Hospital.updateOne(
       { _id: mongoose.Types.ObjectId(hospitalId) },
@@ -1217,17 +1319,18 @@ module.exports = {
           name,
           address,
           pincode,
-          landmark
+          landmark,
+          latLng
         }
       },
       (err, raw) => {
         if (err) {
           console.log(err);
-          callback(false);
+          callback(false, 'Error updating hospital');
         } else {
           console.log('Hospital details updated successfully.');
           console.log(raw);
-          callback(true);
+          callback(true, 'Hospital updated successfully');
         }
       }
     );
@@ -1350,6 +1453,159 @@ module.exports = {
             };
           });
           callback(doctors);
+        }
+      }
+    );
+  },
+
+  /**
+   * getAnnouncements method fetches all the annoucements made previously
+   *
+   * @param {Function} callback
+   */
+  getAnnouncements(callback) {
+    Announcement.find(
+      {},
+      {},
+      {
+        sort: {
+          date: 1
+        }
+      },
+      (err, announcements) => {
+        if (err) {
+          console.log(err);
+          callback([]);
+        } else {
+          callback(announcements);
+        }
+      }
+    );
+  },
+
+  /**
+   * setSupportDetails method is used to update the support details.
+   *
+   * @param {Object} data
+   * @param {Function} callback
+   */
+  setSupportDetails(data, callback) {
+    const { contactNumber, contactEmail } = data;
+    UserSupport.remove({}, err => {
+      if (err) {
+        console.error(err);
+      } else {
+        console.log('user_supports collection data cleared.');
+        UserSupport.collection
+          .insertOne({
+            contactNumber,
+            contactEmail
+          })
+          .then(res => {
+            console.log('user_supports collection updated successfully.');
+            callback(true);
+          })
+          .catch(err => {
+            console.error('Failure updating user_supports collection. ' + err);
+            callback(false);
+          });
+      }
+    });
+  },
+
+  /**
+   * getDoctorDetail method fetches the details of the doctor for a given doctorPdNumber
+   *
+   * @param {String} doctorPdNumber
+   * @param {Function} callback
+   */
+  getDoctorDetail(doctorPdNumber, callback) {
+    Doctor.aggregate(
+      [
+        {
+          $match: {
+            doctorPdNumber
+          }
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'userDetails'
+          }
+        },
+        {
+          $unwind: '$userDetails'
+        },
+        {
+          $project: {
+            'userDetails.userType': 0,
+            'userDetails.status': 0,
+            'userDetails.favorites': 0,
+            'userDetails.password': 0,
+            'userDetails._id': 0
+          }
+        }
+      ],
+      (err, doctors) => {
+        if (err) {
+          console.log(err);
+          callback([]);
+        } else {
+          const {
+            _id,
+            userId,
+            specialization,
+            yearsOfExperience,
+            degree,
+            profileContent,
+            doctorPdNumber,
+            userDetails
+          } = doctors[0];
+          const {
+            username,
+            fullName,
+            profileImage,
+            gender,
+            dateOfBirth
+          } = userDetails;
+
+          callback({
+            doctorId: _id,
+            userId,
+            specialization: { label: specialization, value: specialization },
+            yearsOfExperience,
+            degree,
+            profileContent,
+            doctorPdNumber,
+            mobile: username,
+            fullName,
+            profileImage,
+            gender: { label: gender, value: gender },
+            dateOfBirth: new Date(dateOfBirth)
+          });
+        }
+      }
+    );
+  },
+
+  /**
+   * getHospitalDetails method fetches the details of the hospital given the hospitalPdNUmber
+   *
+   * @param {String} hospitalPdNumber
+   * @param {Function} callback
+   */
+  getHospitalDetails(hospitalPdNumber, callback) {
+    Hospital.findOne(
+      {
+        hospitalPdNumber
+      },
+      (err, hospital) => {
+        if (err) {
+          callback([]);
+        } else {
+          callback(hospital);
         }
       }
     );
@@ -1648,4 +1904,65 @@ function _checkIfUserAlreadyExists(mobile) {
       }
     });
   });
+}
+
+/**
+ * _getMasterFrontdeskUsers method is used to fetch all the list of front desk users
+ */
+function _getMasterFrontdeskUsers() {
+  return new Promise((resolve, reject) => {
+    User.find(
+      { userType: userType.FRONTDESK },
+      {
+        deviceToken: 0,
+        dateOfBirth: 0,
+        password: 0,
+        favorites: 0,
+        status: 0,
+        userType: 0,
+        userId: 0
+      },
+      (err, users) => {
+        if (err) {
+          reject(err);
+        } else {
+          let frontdeskUsers = users.map(user => {
+            const { _id, username, fullName } = user;
+            return {
+              frontdeskUserId: _id,
+              name: fullName,
+              mobile: username
+            };
+          });
+          resolve(frontdeskUsers);
+        }
+      }
+    );
+  });
+}
+
+/**
+ * _createScoresRecord method creates an entry in the scores collection
+ *
+ * @param {ObjectId} doctorId
+ */
+function _createScoresRecord(doctorId) {
+  let scores = new Scores();
+  scores.doctorId = doctorId;
+  scores.trust = 0;
+  scores.popularity = 0;
+  scores.schedule = 0;
+  scores.total = 0;
+  Scores.collection
+    .save(scores)
+    .then(res => {})
+    .catch(err =>
+      console.error(
+        `***** Error creating scores record for doctor with _id: ${
+          doctor._id
+        }` +
+          ' ' +
+          err
+      )
+    );
 }

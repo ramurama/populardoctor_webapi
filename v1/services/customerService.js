@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const modelNames = require('../constants/modelNames');
+const modelNames = require('../../constants/modelNames');
 const User = mongoose.model(modelNames.USERS);
 const Doctor = mongoose.model(modelNames.DOCTOR);
 const Specialization = mongoose.model(modelNames.SPECIALIZATION);
@@ -11,14 +11,15 @@ const AutoNumber = mongoose.model(modelNames.AUTO_NUMBER);
 const Booking = mongoose.model(modelNames.BOOKING);
 const BookingOtp = mongoose.model(modelNames.BOOKING_OTP);
 const utils = require('../utils');
-const tokenBookingStatus = require('../constants/tokenBookingStatus');
+const tokenBookingStatus = require('../../constants/tokenBookingStatus');
 const moment = require('moment');
 const momentTz = require('moment-timezone');
 const CronJob = require('cron').CronJob;
-const operations = require('../constants/operation');
+const operations = require('../../constants/operation');
 const AsyncLock = require('async-lock');
 
-const BOOKING_TIME_LIMIT = 4; //4 hours
+const BOOKING_TIME_LIMIT = require('../../config/booking.json')
+  .bookingStartLimit;
 
 module.exports = {
   /**
@@ -436,18 +437,23 @@ module.exports = {
           tokenDate
         );
         const { startTime, endTime } = tokenTableDoc;
-        const startTimeStamp = utils
+
+        //compute start time and save as string
+        let startTimeStamp = utils
           .getDateTime(tokenDate, startTime)
           .subtract(BOOKING_TIME_LIMIT, 'hours')
           .toDate();
-        const endTimeStamp = utils.getDateTime(tokenDate, endTime).toDate();
+        startTimeStamp = utils.getIstString(startTimeStamp);
+
+        //compute end time and save as string
+        let endTimeStamp = utils.getDateTime(tokenDate, endTime).toDate();
+        endTimeStamp = utils.getIstString(endTimeStamp);
+
         const selectedToken = _findToken(tokenTableDoc.tokens, tokenNumber);
         delete selectedToken.status;
 
         const bookingId = await _getAutoNumber();
-        const bookedTimeStamp = moment(new Date())
-          .tz('Asia/Calcutta')
-          .format();
+        const bookedTimeStamp = utils.getIstString(new Date());
         Booking.collection
           .insertOne({
             bookingId,
@@ -675,36 +681,43 @@ module.exports = {
    * @param {String} bookingId
    * @param {Function} callback
    */
-  cancelBooking(bookingId, callback) {
+  async cancelBooking(bookingId, callback) {
     bookingId = parseInt(bookingId);
-    Booking.findOneAndUpdate(
-      { bookingId },
-      { $set: { status: tokenBookingStatus.CANCELLED } },
-      {},
-      async (err, booking) => {
-        if (err) {
-          console.log(err);
-          callback(false);
-        } else {
-          try {
-            //update TokenTable document status to OPEN for allowing other users to book the same token.
-            const tokenTableUpdateStatus = await _updateTokenTableDoc(booking);
-            callback(tokenTableUpdateStatus);
-          } catch (err) {
+    const bookingStatus = await _getBookingStatus(bookingId);
+    if (!utils.isEqual(bookingStatus, tokenBookingStatus.VISITED)) {
+      Booking.findOneAndUpdate(
+        { bookingId },
+        { $set: { status: tokenBookingStatus.CANCELLED } },
+        {},
+        async (err, booking) => {
+          if (err) {
             console.log(err);
             callback(false);
+          } else {
+            try {
+              //update TokenTable document status to OPEN for allowing other users to book the same token.
+              const tokenTableUpdateStatus = await _updateTokenTableDoc(
+                booking
+              );
+              callback(tokenTableUpdateStatus);
+            } catch (err) {
+              console.log(err);
+              callback(false);
+            }
           }
         }
-      }
-    );
+      );
+    } else {
+      callback(false);
+    }
   }
 };
 
 /**
- * _updateTokenTableDoc method is used to update the status 
+ * _updateTokenTableDoc method is used to update the status
  *  of the booking to CANCELLED in TokenTable collection
- * 
- * @param {String} booking 
+ *
+ * @param {String} booking
  */
 function _updateTokenTableDoc(booking) {
   const { tokenDate, doctorId, scheduleId, token } = booking;
@@ -1260,5 +1273,22 @@ function _getLatestBookingWithoutFeedback(userId) {
         }
       }
     );
+  });
+}
+
+/**
+ * _getBookingStatus method fetches the booking status for a bookingId
+ *
+ * @param {Number} bookingId
+ */
+function _getBookingStatus(bookingId) {
+  return new Promise((resolve, reject) => {
+    Booking.findOne({ bookingId }, (err, booking) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(booking.status);
+      }
+    });
   });
 }

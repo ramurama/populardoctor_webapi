@@ -7,21 +7,25 @@ const bookingSchema = new Schema({
   bookingId: {
     type: Number,
     required: true,
-    unique: true
+    unique: true,
+    index: true
   },
   doctorId: {
     type: Schema.Types.ObjectId,
     ref: modelNames.DOCTOR,
-    required: true
+    required: true,
+    index: true
   },
   scheduleId: {
     type: Schema.Types.ObjectId,
     ref: modelNames.SCHEDULE,
-    required: true
+    required: true,
+    index: true
   },
   tokenDate: {
     type: Date,
-    required: true
+    required: true,
+    index: true
   },
   token: {
     type: Object,
@@ -49,7 +53,8 @@ const bookingSchema = new Schema({
       tokenBookingStatus.VISITED,
       tokenBookingStatus.CANCELLED
     ],
-    default: tokenBookingStatus.BOOKED
+    default: tokenBookingStatus.BOOKED,
+    index: true
   },
   visitedTimeStamp: {
     type: 'string'
@@ -63,7 +68,12 @@ const bookingSchema = new Schema({
   },
   suggestions: {
     type: 'string'
+  },
+  distanceMatrix: {
+    type: Number,
+    required: false
   }
 });
 
+bookingSchema.set('autoIndex', false);
 mongoose.model(modelNames.BOOKING, bookingSchema);

@@ -1,15 +1,14 @@
 const mongoose = require('mongoose');
-const modelNames = require('../constants/modelNames');
+const modelNames = require('../../constants/modelNames');
 const Doctor = mongoose.model(modelNames.DOCTOR);
 const TokenTable = mongoose.model(modelNames.TOKEN_TABLE);
 const Schedule = mongoose.model(modelNames.SCHEDULE);
 const Booking = mongoose.model(modelNames.BOOKING);
 const BookingOtp = mongoose.model(modelNames.BOOKING_OTP);
-const tokenBookingStatus = require('../constants/tokenBookingStatus');
+const tokenBookingStatus = require('../../constants/tokenBookingStatus');
 const utils = require('../utils');
 const moment = require('moment');
-const momentTz = require('moment-timezone');
-const messageService = require('../services/messageService');
+const messageService = require('./messageService');
 
 module.exports = {
   /**
@@ -237,6 +236,7 @@ module.exports = {
             const { hospitalDetails, startTime, endTime } = schedule;
             const obj = {
               hospitalName: hospitalDetails.name,
+              hospitalPdNumber: hospitalDetails.hospitalPdNumber,
               hospitalTime: startTime + ' to ' + endTime,
               appointmentDate: today,
               visitorsList
@@ -372,6 +372,7 @@ module.exports = {
     try {
       const status = await _confirmVisit(bookingId);
       if (status) {
+        //compute distance matrix 
         callback(true);
       } else {
         callback(false);
@@ -595,6 +596,24 @@ module.exports = {
             callback(true);
           }
         });
+      }
+    });
+  },
+
+  /**
+   * getDoctorPdNumber method is used to fetch the doctor's PD number
+   *
+   * @param {String} userId
+   * @param {Function} callback
+   */
+  getDoctorPdNumber(userId, callback) {
+    userId = mongoose.Types.ObjectId(userId);
+    Doctor.findOne({ userId }, (err, doctor) => {
+      if (err) {
+        console.error(err);
+        callback(null);
+      } else {
+        callback(doctor.doctorPdNumber);
       }
     });
   }
@@ -850,22 +869,26 @@ function _confirmVisit(bookingId) {
  */
 function _deleteBookingOtp(bookingId) {
   BookingOtp.deleteOne({ bookingId })
-    .then(res => console.log('Bookint OTP deleted for bookingId: ' + bookingId))
+    .then(res => console.log('Booking OTP deleted for bookingId: ' + bookingId))
     .catch(err => console.log('Error deleting bookingId.' + err));
 }
 
 function _cancelBooking(tokenDate, scheduleId, token) {
-  Booking.findOneAndUpdate(
+  Booking.updateMany(
     { tokenDate, scheduleId, token },
     { $set: { status: tokenBookingStatus.CANCELLED } },
     {},
     (err, booking) => {
+      console.log(booking);
       if (err) {
         console.log(err);
       } else {
         //notify user
-        console.log('Calcelling regular and premium bookings...');
-        _notifyUser(booking.bookingId);
+        console.log('notifying users');
+        // _notifyUser(booking.bookingId);
+        Booking.find({ tokenDate, scheduleId, token }, (err, bookings) => {
+          bookings.forEach(bookingItem => _notifyUser(bookingItem.bookingId));
+        });
       }
     }
   );

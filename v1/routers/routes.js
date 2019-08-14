@@ -21,6 +21,8 @@ module.exports = {
   //admin
   CREATE_SPECIALIZATION: '/api/v1/admin/createSpecialization',
   CREATE_DOCTOR: '/api/v1/admin/createDoctor',
+  UPLOAD_DOCTOR_PROFILE_IMAGE: '/api/v1/admin/uploadDoctorProfileImage',
+  DELETE_DOCTOR_PROFILE_IMAGE: '/api/v1/admin/deleteDoctorProfileImage',
   CREATE_HOSPITAL: '/api/v1/admin/createHospital',
   CREATE_SCHEDULE: '/api/v1/admin/createSchedule',
   GET_DR_FRONTDESK_USER: '/api/v1/admin/getDoctorFrontdeskUser',
@@ -41,13 +43,18 @@ module.exports = {
   GET_SPECIALIZATIONS: '/api/v1/admin/getSpecializations',
   CREATE_FRONTDESK_USER: '/api/v1/admin/createFrontdeskUser',
   LINK_FRONTDESK_USER: '/api/v1/admin/linkFrontdeskUser',
-  UPDATE_FRONTDESK_USER: '/api/v1/admin/updateFrontdeskUser',
   UPDATE_DOCTOR: '/api/v1/admin/updateDoctor',
   UPDATE_HOSPITAL: '/api/v1/admin/updateHospital',
   GET_SCHEDULES: '/api/v1/admin/getSchedules',
   GET_SCHEDULE_DETAILS: '/api/v1/admin/getScheduleDetails',
+  UPDATE_SCHEDULE: '/api/v1/admin/updateSchedule',
   GET_SCHEDULE_HOSPITALS: '/api/v1/admin/getScheduleHospitals',
   GET_SCHEDULE_DOCTORS: '/api/v1/admin/getScheduleDoctors',
+  GET_ANNOUNCEMENTS: '/api/v1/admin/getAnnouncements',
+  SET_SUPPORT_DETAILS: '/api/v1/admin/setSupportDetails',
+  CHANGE_PASSWORD_ADMIN: '/api/v1/admin/changePassword',
+  GET_DOCTOR_DETAIL: '/api/v1/admin/getDoctorDetails',
+  GET_HOSPITAL_DETAIL: '/api/v1/admin/getHospitalDetails',
 
   //customer
   GET_INITIAL_DATA: '/api/v1/customer/getInitialData',
@@ -74,6 +81,7 @@ module.exports = {
   GET_BOOKING_STATUS: '/api/v1/doctor/getBookingStatus',
   GET_CONFIRMED_SCHEDULES_DR: '/api/v1/doctor/getConfirmedSchedules',
   BLOCK_SCHEDULE_DR: '/api/v1/doctor/blockSchedule',
+  GET_DR_PD_NUMBER: '/api/v1/doctor/getPdNumber',
 
   //frontdesk
   GET_FD_TODAYS_BOOKINGS: '/api/v1/frontdesk/getTodaysBookings',
@@ -82,5 +90,8 @@ module.exports = {
   VERIFY_BOOKING_OTP_FD: '/api/v1/frontdesk/verifyBookingOtp',
   GET_FD_BOOKING_STATUS: '/api/v1/frontdesk/getBookingStatus',
   GET_CONFIRMED_SCHEDULES_FD: '/api/v1/frontdesk/getConfirmedSchedules',
-  BLOCK_SCHEDULE_FD: '/api/v1/frontdesk/blockSchedule'
+  BLOCK_SCHEDULE_FD: '/api/v1/frontdesk/blockSchedule',
+
+  //scoring engine
+  SCORING_ENGINE_RUN: '/api/v1/scoringEngine/run'
 };

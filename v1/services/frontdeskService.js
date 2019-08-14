@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
-const modelNames = require("../constants/modelNames");
+const modelNames = require("../../constants/modelNames");
 const Schedule = mongoose.model(modelNames.SCHEDULE);
 const Booking = mongoose.model(modelNames.BOOKING);
 const TokenTable = mongoose.model(modelNames.TOKEN_TABLE);
-const tokenBookingStatus = require("../constants/tokenBookingStatus");
+const tokenBookingStatus = require("../../constants/tokenBookingStatus");
 const utils = require("../utils");
 const moment = require("moment");
 

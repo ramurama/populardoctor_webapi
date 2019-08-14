@@ -5,11 +5,13 @@ const modelNames = require('../constants/modelNames');
 const hospitalSchema = new Schema({
   hospitalPdNumber: {
     type: String,
-    required: true
+    required: true,
+    index: true
   },
   name: {
     type: 'string',
-    required: true
+    required: true,
+    index: true
   },
   address: {
     type: 'string',
@@ -17,6 +19,11 @@ const hospitalSchema = new Schema({
   },
   location: {
     type: 'string',
+    required: true,
+    index: true
+  },
+  latLng: {
+    type: 'array',
     required: true
   },
   landmark: {
@@ -25,8 +32,10 @@ const hospitalSchema = new Schema({
   },
   pincode: {
     type: 'string',
-    required: true
+    required: true,
+    index: true
   }
 });
 
+hospitalSchema.set('autoIndex', false);
 mongoose.model(modelNames.HOSPITAL, hospitalSchema);

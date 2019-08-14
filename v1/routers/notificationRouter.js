@@ -1,6 +1,6 @@
-const routes = require("../constants/routes");
+const routes = require("./routes");
 const messageService = require("../services/messageService");
-const firebaseTopics = require("../constants/firebaseTopics");
+const firebaseTopics = require("../../constants/firebaseTopics");
 
 module.exports = app => {
   app.post(routes.SEND_PUSH + ":mobile", (req, res) => {

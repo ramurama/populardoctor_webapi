@@ -6,16 +6,19 @@ const gender = require('../constants/gender');
 const doctorSchema = new Schema({
   doctorPdNumber: {
     type: String,
-    required: true
+    required: true,
+    index: true
   },
   userId: {
     type: Schema.Types.ObjectId,
     ref: modelNames.USERS,
-    required: true
+    required: true,
+    index: true
   },
   specialization: {
     type: 'string',
-    required: true
+    required: true,
+    index: true
   },
   yearsOfExperience: {
     type: Number,
@@ -29,5 +32,5 @@ const doctorSchema = new Schema({
     required: true
   }
 });
-
+doctorSchema.set('autoIndex', false);
 mongoose.model(modelNames.DOCTOR, doctorSchema);

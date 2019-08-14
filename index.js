@@ -4,23 +4,25 @@ const keys = require('./config/keys');
 const cookieSession = require('cookie-session');
 const passport = require('passport');
 const bodyParser = require('body-parser');
+const multer = require('multer');
 
-//v1 models
-require('./v1/models/User');
-require('./v1/models/MobileOtp');
-require('./v1/models/BookingOtp');
-require('./v1/models/Specialization');
-require('./v1/models/Location');
-require('./v1/models/Hospital');
-require('./v1/models/Doctor');
-require('./v1/models/Schedule');
-require('./v1/models/TokenTable');
-require('./v1/models/Booking');
-require('./v1/models/AutoNumber');
-require('./v1/models/UserSupport');
-require('./v1/models/Announcement');
-require('./v1/models/DoctorPdNumber');
-require('./v1/models/HospitalPdNumber');
+//models
+require('./models/User');
+require('./models/MobileOtp');
+require('./models/BookingOtp');
+require('./models/Specialization');
+require('./models/Location');
+require('./models/Hospital');
+require('./models/Doctor');
+require('./models/Schedule');
+require('./models/TokenTable');
+require('./models/Booking');
+require('./models/AutoNumber');
+require('./models/UserSupport');
+require('./models/Announcement');
+require('./models/DoctorPdNumber');
+require('./models/HospitalPdNumber');
+require('./models/Scores');
 
 //v1 services
 require('./v1/services/passport');
@@ -29,6 +31,7 @@ require('./v1/services/customerService');
 require('./v1/services/adminService');
 require('./v1/services/doctorService');
 require('./v1/services/frontdeskService');
+require('./v1/services/scoringService');
 
 //v1 routers
 const authRouterV1 = require('./v1/routers/authRouter');
@@ -38,6 +41,21 @@ const customerRouterV1 = require('./v1/routers/customerRouter');
 const adminRouterV1 = require('./v1/routers/adminRouter');
 const doctorRouterV1 = require('./v1/routers/doctorRouter');
 const frontdeskRouterV1 = require('./v1/routers/frontdeskRouter');
+const scoringEngineRouterV1 = require('./v1/routers/scoringRouter');
+
+//file uploader setup begins
+const diskStorage = multer.diskStorage({
+  destination: (req, file, callback) => {
+    callback(null, __dirname + '/doctor-profile-images');
+  },
+  filename: (req, file, callback) => {
+    const extension = file.originalname.split('.')[1];
+    const filename = `${req.params.doctorPdNumber}.${extension}`;
+    callback(null, filename);
+  }
+});
+const uploader = multer({ storage: diskStorage });
+//file uploader setup ends
 
 mongoose.connect(keys.mongoURI, { useNewUrlParser: true });
 
@@ -57,9 +75,10 @@ authRouterV1(app);
 settingsRouterV1(app);
 notificationRouterV1(app);
 customerRouterV1(app);
-adminRouterV1(app);
+adminRouterV1(app, uploader);
 doctorRouterV1(app);
 frontdeskRouterV1(app);
+scoringEngineRouterV1(app);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT);

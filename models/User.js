@@ -4,7 +4,7 @@ const modelNames = require('../constants/modelNames');
 const userType = require('../constants/userType');
 const gender = require('../constants/gender');
 const activationStatus = require('../constants/activationStatus');
-const bcrypt = require('bcrypt-nodejs');
+const bcrypt = require('bcrypt');
 const passwordConfig = require('../config/password');
 
 const userSchema = new Schema({

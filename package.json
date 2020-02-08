@@ -28,7 +28,7 @@
     "@google-cloud/storage": "^2.5.0",
     "async-lock": "^1.2.0",
     "babel-polyfill": "^6.26.0",
-    "bcrypt-nodejs": "0.0.3",
+    "bcrypt": "^3.0.8",
     "body-parser": "^1.18.3",
     "clean-webpack-plugin": "^1.0.0",
     "concurrently": "^4.1.0",

@@ -1,5 +1,6 @@
 const keys = require('../../config/keys');
 const { Storage } = require('@google-cloud/storage');
+const logger = require('../utils/logger');
 
 const storage = new Storage({
   projectId: keys.googleProjectId,
@@ -15,18 +16,22 @@ module.exports = {
 
   uploadNewFile(fileName, callback) {
     const file = bucket.file(fileName);
-    console.log(fileName);
     file
       .exists()
       .then(async exists => {
-        if (exists[0]) {
-          //file exists
-          console.log('File already exists');
-          await bucket
-            .file(fileName)
-            .delete(async () => callback(await uploadFile(fileName)));
-        } else {
-          callback(await uploadFile(fileName));
+        try {
+          if (exists[0]) {
+            //file exists
+            console.log('File already exists');
+            await bucket
+              .file(fileName)
+              .delete(async () => callback(await uploadFile(fileName)));
+          } else {
+            callback(await uploadFile(fileName));
+          }
+        } catch (err) {
+          logger.error(err);
+          callback('');
         }
       })
       .catch(err => {
@@ -42,7 +47,7 @@ module.exports = {
         callback(true);
       })
       .catch(err => {
-        console.log(err);
+        logger.error(err);
       });
   }
 };
@@ -54,11 +59,10 @@ function uploadFile(fileName) {
       .upload(localFileLocation, { public: true })
       .then(file => {
         // file saved
-        console.log('***** uploading new image');
         resolve(getPublicUrl(fileName));
       })
       .catch(err => {
-        console.error(err);
+        logger.error(err);
         reject(err);
       });
   });

@@ -9,6 +9,7 @@ const tokenBookingStatus = require('../../constants/tokenBookingStatus');
 const utils = require('../utils');
 const moment = require('moment');
 const messageService = require('./messageService');
+const logger = require('../utils/logger');
 
 module.exports = {
   /**
@@ -39,8 +40,9 @@ module.exports = {
       TokenTable.collection
         .insertOne(tokenTable)
         .then(res => callback(true))
-        .catch(err => console.log('***** Error creating token table. ' + err));
+        .catch(err => logger.error('***** Error creating token table. ' + err));
     } catch (err) {
+      logger.error(err);
       callback(false);
     }
   },
@@ -78,6 +80,7 @@ module.exports = {
         });
       callback({ schedules: nextDayScheduleConfirmations, tokenDate });
     } catch (err) {
+      logger.error(err);
       callback({ schedules: [], tokenDate });
     }
   },
@@ -176,6 +179,7 @@ module.exports = {
         ],
         (err, bookings) => {
           if (err) {
+            logger.error(err);
             callback(null);
           } else {
             callback(bookings);
@@ -183,6 +187,7 @@ module.exports = {
         }
       );
     } catch (err) {
+      logger.error(err);
       callback([]);
     }
   },
@@ -252,11 +257,11 @@ module.exports = {
           callback(todaysBookings);
         })
         .catch(err => {
-          console.log(err);
+          logger.error(err);
           callback([]);
         });
     } catch (err) {
-      console.log(err);
+      logger.error(err);
       callback([]);
     }
   },
@@ -342,7 +347,9 @@ module.exports = {
           }
         ],
         (err, booking) => {
-          if (utils.isNullOrEmpty(booking)) {
+          if (err) {
+            logger.error(err);
+          } else if (utils.isNullOrEmpty(booking)) {
             callback(
               false,
               'Appointment has been made for a different doctor.',
@@ -354,6 +361,7 @@ module.exports = {
         }
       );
     } catch (err) {
+      logger.error(err);
       callback(false, 'Unknown error!', null);
     }
   },
@@ -372,12 +380,13 @@ module.exports = {
     try {
       const status = await _confirmVisit(bookingId);
       if (status) {
-        //compute distance matrix 
+        //compute distance matrix
         callback(true);
       } else {
         callback(false);
       }
     } catch (err) {
+      logger.error(err);
       callback(false);
     }
   },
@@ -393,6 +402,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       BookingOtp.findOne({ bookingId }, async (err, booking) => {
         if (err) {
+          logger.error(err);
           reject(false);
         } else {
           if (utils.isEqual(parseInt(otp), booking.otp)) {
@@ -404,6 +414,7 @@ module.exports = {
                 resolve({ status: false, message: 'Unknown error!' });
               }
             } catch (err) {
+              logger.error(err);
               reject(err);
             }
           } else {
@@ -424,6 +435,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       Booking.findOne({ bookingId }, (err, booking) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           resolve(booking.status);
@@ -487,7 +499,7 @@ module.exports = {
         ],
         (err, tokenTableDocs) => {
           if (err) {
-            console.log(err);
+            logger.error(err);
             callback([]);
           } else {
             let confirmedSchedules = tokenTableDocs
@@ -541,7 +553,7 @@ module.exports = {
         }
       );
     } catch (err) {
-      console.log(err);
+      logger.error(err);
       callback([]);
     }
   },
@@ -559,7 +571,7 @@ module.exports = {
     const _id = mongoose.Types.ObjectId(tokenTableId);
     TokenTable.findOne({ _id }, (err, tokenTableDoc) => {
       if (err) {
-        console.log(err);
+        logger.error(err);
         callback(false);
       } else {
         let tokens = tokenTableDoc.tokens;
@@ -590,7 +602,7 @@ module.exports = {
 
         TokenTable.updateOne({ _id }, { $set: { tokens } }, (err, raw) => {
           if (err) {
-            console.log(err);
+            logger.error(err);
             callback(false);
           } else {
             callback(true);
@@ -610,7 +622,7 @@ module.exports = {
     userId = mongoose.Types.ObjectId(userId);
     Doctor.findOne({ userId }, (err, doctor) => {
       if (err) {
-        console.error(err);
+        logger.error(err);
         callback(null);
       } else {
         callback(doctor.doctorPdNumber);
@@ -628,6 +640,7 @@ function _getDoctorIdByUserId(userId) {
   return new Promise((resolve, reject) => {
     Doctor.findOne({ userId }, (err, doctor) => {
       if (err) {
+        logger.error(err);
         reject(err);
       } else {
         resolve(doctor._id);
@@ -646,6 +659,7 @@ function _getSchedule(doctorId, scheduleId) {
   return new Promise((resolve, reject) => {
     Schedule.findOne({ doctorId, _id: scheduleId }, (err, schedule) => {
       if (err) {
+        logger.error(err);
         reject(err);
       } else {
         resolve(schedule);
@@ -707,6 +721,7 @@ function _getBookingsForTheDay(today, doctorId) {
       ],
       (err, bookings) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           resolve(bookings);
@@ -755,6 +770,7 @@ function _getSchedulesForTheDay(today, doctorId) {
       ],
       (err, schedules) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           resolve(schedules);
@@ -800,6 +816,7 @@ function _getSchedulesForWeekday(doctorId, weekday) {
       ],
       (err, schedules) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           resolve(schedules);
@@ -822,6 +839,7 @@ function _getTokenTablesForWeekday(doctorId, tokenDate) {
       { tokens: 0 },
       (err, tokenTableDocs) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           resolve(tokenTableDocs);
@@ -846,6 +864,7 @@ function _confirmVisit(bookingId) {
       { $set: { status: tokenBookingStatus.VISITED, visitedTimeStamp } },
       (err, booking) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           //delete booking otp
@@ -881,13 +900,17 @@ function _cancelBooking(tokenDate, scheduleId, token) {
     (err, booking) => {
       console.log(booking);
       if (err) {
-        console.log(err);
+        logger.error(err);
       } else {
         //notify user
-        console.log('notifying users');
+        logger.trace('notifying users');
         // _notifyUser(booking.bookingId);
         Booking.find({ tokenDate, scheduleId, token }, (err, bookings) => {
-          bookings.forEach(bookingItem => _notifyUser(bookingItem.bookingId));
+          if (err) {
+            logger.error(err);
+          } else {
+            bookings.forEach(bookingItem => _notifyUser(bookingItem.bookingId));
+          }
         });
       }
     }
@@ -906,7 +929,7 @@ function _cancelAllFastTrackBookings(tokenDate, scheduleId) {
     { tokenDate, scheduleId, 'token.number': 0 },
     (err, bookings) => {
       if (err) {
-        console.log('Error fetching fasttrack tokens for ' + tokenDate);
+        logger.error('Error fetching fasttrack tokens for ' + tokenDate);
       } else {
         bookings.forEach(booking => {
           const { bookingId, userId } = booking;
@@ -915,10 +938,13 @@ function _cancelAllFastTrackBookings(tokenDate, scheduleId) {
               { bookingId },
               { $set: { status: tokenBookingStatus.CANCELLED } },
               (err, raw) => {
-                console.log('Cancelling fasttrack token...');
                 //notify user
-                _notifyUser(bookingId);
-                console.log(raw);
+                if (err) {
+                  logger.error(err);
+                } else {
+                  _notifyUser(bookingId);
+                  logger.trace(raw);
+                }
               }
             );
           }
@@ -976,16 +1002,20 @@ function _notifyUser(bookingId) {
       }
     ],
     (err, booking) => {
-      const doctorName = booking[0].doctorUserDetails.fullName;
-      const title = 'Appointment Cancelled!';
-      const message =
-        'Your appointment with Dr. ' + doctorName + '  has been cancelled.';
-      messageService.sendPushNotificationByUser(
-        booking[0].userDetails.username,
-        title,
-        message
-      );
-      console.log(booking[0].userId);
+      if (err) {
+        logger.error(err);
+      } else {
+        const doctorName = booking[0].doctorUserDetails.fullName;
+        const title = 'Appointment Cancelled!';
+        const message =
+          'Your appointment with Dr. ' + doctorName + '  has been cancelled.';
+        messageService.sendPushNotificationByUser(
+          booking[0].userDetails.username,
+          title,
+          message
+        );
+        logger.trace(booking[0].userId);
+      }
     }
   );
 }
@@ -1001,23 +1031,27 @@ function _updateTokenTableTokenStatus(booking) {
   TokenTable.findOne(
     { tokenDate, doctorId, scheduleId },
     (err, tokenTableDoc) => {
-      let tokens = tokenTableDoc.tokens;
-      const selectedToken = _findToken(tokens, token.number);
-      selectedToken.status = tokenBookingStatus.VISITED;
-      TokenTable.updateOne(
-        { tokenDate, doctorId, scheduleId },
-        { $set: { tokens } },
-        (err, raw) => {
-          if (err) {
-            console.log(
-              'Error updating tokentable token status to VISITED.' + err
-            );
-          } else {
-            console.log('TokenTable doc token status updated to VISITED.');
-            console.log(raw);
+      if (err) {
+        logger.error(err);
+      } else {
+        let tokens = tokenTableDoc.tokens;
+        const selectedToken = _findToken(tokens, token.number);
+        selectedToken.status = tokenBookingStatus.VISITED;
+        TokenTable.updateOne(
+          { tokenDate, doctorId, scheduleId },
+          { $set: { tokens } },
+          (err, raw) => {
+            if (err) {
+              logger.error(
+                'Error updating tokentable token status to VISITED.' + err
+              );
+            } else {
+              console.log('TokenTable doc token status updated to VISITED.');
+              logger.trace(raw);
+            }
           }
-        }
-      );
+        );
+      }
     }
   );
 }

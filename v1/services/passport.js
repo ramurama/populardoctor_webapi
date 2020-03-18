@@ -5,6 +5,7 @@ const JwtStrategy = require('passport-jwt').Strategy,
 const mongoose = require('mongoose');
 const modelNames = require('../../constants/modelNames');
 const keys = require('../../config/keys');
+const logger = require('../utils/logger');
 
 const User = mongoose.model(modelNames.USERS);
 
@@ -26,6 +27,7 @@ passport.use(
       },
       (err, user) => {
         if (err) {
+          logger.error(err);
           callback(err);
         }
         if (!user) {
@@ -51,6 +53,7 @@ passport.use(
     (jwtPayload, callback) => {
       User.findOne({ username: jwtPayload.username }, (err, user) => {
         if (err) {
+          logger.error(err);
           callback(err, false);
         }
         if (user) {

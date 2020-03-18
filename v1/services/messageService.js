@@ -1,16 +1,17 @@
-const firebase = require("firebase-admin");
-const mongoose = require("mongoose");
-const modelnames = require("../../constants/modelNames");
+const firebase = require('firebase-admin');
+const mongoose = require('mongoose');
+const modelnames = require('../../constants/modelNames');
 const User = mongoose.model(modelnames.USERS);
 const MobileOtp = mongoose.model(modelnames.MOBILE_OTP);
 const Announcement = mongoose.model(modelnames.ANNOUNCEMENTS);
-const firebaseTopics = require("../../constants/firebaseTopics");
-const utils = require("../utils");
+const firebaseTopics = require('../../constants/firebaseTopics');
+const utils = require('../utils');
+const logger = require('../utils/logger');
 
-var serviceAccount = require("../../config/serviceAccountKey.json");
+var serviceAccount = require('../../config/serviceAccountKey.json');
 firebase.initializeApp({
   credential: firebase.credential.cert(serviceAccount),
-  databaseURL: "https://populardoctor-f4673.firebaseio.com"
+  databaseURL: 'https://populardoctor-f4673.firebaseio.com'
 });
 
 module.exports = {
@@ -34,10 +35,10 @@ module.exports = {
         .messaging()
         .send(message)
         .then(res => {
-          console.log("Successfully sent message:", res);
+          console.log('Successfully sent message:', res);
         })
         .catch(error => {
-          console.log("Error sending message:", error);
+          logger.error('Error sending message:', error);
         });
     });
   },
@@ -54,10 +55,10 @@ module.exports = {
         .messaging()
         .subscribeToTopic([user.deviceToken], firebaseTopics.ANNOUNCEMENTS)
         .then(res => {
-          console.log("Successfully subscribed to topic:", res);
+          console.log('Successfully subscribed to topic:', res);
         })
         .catch(err => {
-          console.log("Error subscribing to topic:", err);
+          logger.error('Error subscribing to topic:', err);
         });
     });
   },
@@ -85,10 +86,10 @@ module.exports = {
       .then(res => {
         //save announcement document
         _saveAnnouncementData(title, body);
-        console.log("Successfully sent message:", res);
+        console.log('Successfully sent message:', res);
       })
       .catch(error => {
-        console.log("Error sending message:", error);
+        logger.error('Error sending message:', error);
       });
   },
 
@@ -109,16 +110,16 @@ module.exports = {
             otp
           })
           .then(raw => {
-            console.log("Inserting OTP data to mobile_otp colletion.");
+            console.log('Inserting OTP data to mobile_otp colletion.');
           })
-          .catch(err => console.log("***** Error inserting OTP data." + err));
+          .catch(err => logger.error('***** Error inserting OTP data.' + err));
       } else {
         // mobile number exists, update the otp value
         MobileOtp.updateOne({ mobile }, { $set: { otp } })
           .then(raw => {
-            console.log("Updating OTP data to mobile_otp colletion.");
+            console.log('Updating OTP data to mobile_otp colletion.');
           })
-          .catch(err => console.log("***** Error updating OTP data." + err));
+          .catch(err => logger.error('***** Error updating OTP data.' + err));
       }
     });
 
@@ -138,7 +139,7 @@ function _saveAnnouncementData(title, body) {
   Announcement.collection
     .insertOne({ title, body, date: new Date() })
     .then(res => {
-      console.log("Announcement document added");
+      console.log('Announcement document added');
     })
-    .catch(err => console.log(err));
+    .catch(err => logger.error(err));
 }

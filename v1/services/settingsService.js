@@ -9,6 +9,7 @@ const bcrypt = require('bcrypt');
 const passwordConfig = require('../../config/password');
 const userType = require('../../constants/userType');
 const activationStatus = require('../../constants/activationStatus');
+const logger = require('../utils/logger');
 
 module.exports = {
   /**
@@ -37,7 +38,7 @@ module.exports = {
         callback(true);
       })
       .catch(err =>
-        console.log('***** Error inserting into user model. ' + err)
+        logger.error('***** Error inserting into user model. ' + err)
       );
   },
 
@@ -51,7 +52,9 @@ module.exports = {
    */
   changePassword(mobile, reqData, callback) {
     User.findOne({ username: mobile }, (err, user) => {
-      if (!utils.isNullOrEmpty(user)) {
+      if (err) {
+        logger.error(err);
+      } else if (!utils.isNullOrEmpty(user)) {
         if (!user.comparePassword(reqData.currentPassword, user.password)) {
           callback(false, 'Incorrect old password.');
         } else {
@@ -89,7 +92,7 @@ module.exports = {
       { $set: { deviceToken } },
       (err, raw) => {
         if (err) {
-          console.log(err);
+          logger.error(err);
           callback(false);
         } else {
           //by defult all users will be subscribed to "announcements" firebase topic for sendng notifications
@@ -112,13 +115,16 @@ module.exports = {
   verifyOtp(mobile, otp, callback) {
     MobileOtp.findOne({ mobile }, (err, mobileOtpData) => {
       if (err) {
+        logger.error(err);
         callback(false);
       } else {
         if (utils.isStringsEqual(mobileOtpData.otp, otp)) {
           //delete otp if verified successfully
           MobileOtp.deleteOne({ mobile })
             .then(res => callback(true, 'Mobile number verified successfully.'))
-            .catch(err => console.log('***** Error deleting mobile_otp data.'));
+            .catch(err =>
+              logger.error('***** Error deleting mobile_otp data.')
+            );
         } else {
           callback(false, 'Incorrect OTP entered.');
         }
@@ -150,6 +156,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       UserSupport.find({}, { _id: 0 }, (err, support) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           resolve(support[0]);
@@ -167,12 +174,15 @@ module.exports = {
    */
   resetPassword(mobile, password, callback) {
     User.findOne({ username: mobile }, (err, user) => {
-      if (!utils.isNullOrEmpty(user)) {
+      if (err) {
+        logger.error(err);
+      } else if (!utils.isNullOrEmpty(user)) {
         User.updateOne(
           { username: mobile },
           { $set: { password: user.hashPassword(password) } },
           (err, raw) => {
             if (err) {
+              logger.error(err);
               callback(false, 'Error updating password. Try Again!');
             } else {
               callback(true, 'Password has been changed successfully.');

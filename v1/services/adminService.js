@@ -22,6 +22,7 @@ const fs = require('fs');
 const google = require('./google');
 const tokenValue = require('../../constants/fastrackToken');
 const _ = require('underscore');
+const logger = require('../utils/logger');
 
 module.exports = {
   /**
@@ -83,16 +84,21 @@ module.exports = {
                   doctor.doctorPdNumber
                 );
               })
-              .catch(err => console.log('***** Error saving doctor. ' + err));
+              .catch(err => {
+                logger.error('***** Error saving doctor. ' + err);
+                callback(false, 'Error creating doctor!');
+              });
           })
-          .catch(err =>
-            console.log('***** Error inserting into user model. ' + err)
-          );
+          .catch(err => {
+            logger.error('***** Error inserting into user model. ' + err);
+            callback(false, 'Error creating doctor!');
+          });
       } else {
+        logger.trace('Entered mobile number already exists =' + mobile);
         callback(false, 'Entered mobile number already exists!', null);
       }
     } catch (err) {
-      console.log(err);
+      logger.error(err);
       callback(false, 'Unkown error!');
     }
   },
@@ -109,7 +115,7 @@ module.exports = {
   uploadDoctorProfileImage(doctorPdNumber, filename, callback) {
     google.uploadNewFile(filename, publicUrl => {
       Doctor.findOne({ doctorPdNumber }, (err, doctor) => {
-        console.log(doctor);
+        logger.trace(doctor);
         User.updateOne(
           { _id: doctor.userId },
           { $set: { profileImage: publicUrl } }
@@ -120,7 +126,7 @@ module.exports = {
               callback(true);
             });
           })
-          .catch(err => console.log(err));
+          .catch(err => logger.error(err));
       });
     });
   },
@@ -153,10 +159,9 @@ module.exports = {
             { $set: { profileImage: null } },
             (err, raw) => {
               if (!err) {
-                console.log(raw);
                 callback(status);
               } else {
-                console.log(raw);
+                logger.error(err);
                 callback(false);
               }
             }
@@ -164,7 +169,7 @@ module.exports = {
         });
       })
       .catch(err => {
-        console.log(err);
+        logger.error(err);
       });
   },
 
@@ -204,17 +209,18 @@ module.exports = {
               .insertOne(locationDoc)
               .then(res => callback(true, 'Hospital created successfully'))
               .catch(err =>
-                console.log(
+                logger.error(
                   '***** Error inserting document into Location. ' + err
                 )
               );
           }
         })
-        .catch(err =>
-          console.log('***** Error inserting document into Hospital. ' + err)
-        );
+        .catch(err => {
+          logger.error('***** Error inserting document into Hospital. ' + err);
+          callback(false, 'Error creating hospital');
+        });
     } catch (err) {
-      console.log(err);
+      logger.error(err);
       callback(false, 'Error creating hospital');
     }
   },
@@ -251,10 +257,11 @@ module.exports = {
           .insertOne(schedule)
           .then(res => callback(true, 'Schedule created successfully.'))
           .catch(err =>
-            console.log('***** Error creating schedule document. ' + err)
+            logger.error('***** Error creating schedule document. ' + err)
           );
       }
     } catch (err) {
+      logger.error(err);
       callback(false, 'Unknown error!');
     }
   },
@@ -301,6 +308,7 @@ module.exports = {
       ],
       (err, schedules) => {
         if (err) {
+          logger.error(err);
           callback([]);
         } else {
           callback(schedules);
@@ -425,6 +433,7 @@ module.exports = {
     scheduleId = mongoose.Types.ObjectId(scheduleId);
     Schedule.findOne({ _id: scheduleId }, (err, schedule) => {
       if (err) {
+        logger.error(err);
         callback(false);
       } else {
         const previousTokens = Object.assign(schedule.tokens);
@@ -446,7 +455,7 @@ module.exports = {
           },
           (err, raw) => {
             if (err) {
-              console.log(err);
+              logger.error(err);
               callback(false, 'Error updating schedule');
             } else {
               console.log(raw);
@@ -479,11 +488,13 @@ module.exports = {
         Specialization.collection
           .insertOne(specialization)
           .then(res => callback(true, 'Specialization added successfully.'))
-          .catch(err =>
-            console.log('***** Error creating specialization. ' + err)
-          );
+          .catch(err => {
+            logger.error('***** Error creating specialization. ' + err);
+            callback(false, 'Unknown error!');
+          });
       }
     } catch (err) {
+      logger.error(err);
       callback(false, 'Unknown error!');
     }
   },
@@ -496,6 +507,7 @@ module.exports = {
   getSpecializations(callback) {
     Specialization.find({}, { _id: 0, iconName: 0 }, (err, specializations) => {
       if (err) {
+        logger.error(err);
         callback([]);
       } else {
         callback(specializations);
@@ -539,6 +551,7 @@ module.exports = {
       ],
       (err, doctors) => {
         if (err) {
+          logger.error(err);
           callback({
             status: false,
             doctors: []
@@ -567,6 +580,7 @@ module.exports = {
       },
       (err, users) => {
         if (err) {
+          logger.error(err);
           callback({
             status: false,
             users: []
@@ -600,6 +614,7 @@ module.exports = {
       },
       (err, hospitals) => {
         if (err) {
+          logger.error(err);
           callback({
             status: false,
             hospitals: []
@@ -629,6 +644,7 @@ module.exports = {
         callback(false);
       }
     } catch (err) {
+      logger.error(err);
       callback(false);
     }
   },
@@ -651,6 +667,7 @@ module.exports = {
         callback(false);
       }
     } catch (err) {
+      logger.error(err);
       callback(false);
     }
   },
@@ -669,6 +686,7 @@ module.exports = {
       { $set: { isDeleted: true } },
       (err, raw) => {
         if (err) {
+          logger.error(err);
           callback(false);
         } else {
           callback(true);
@@ -688,6 +706,7 @@ module.exports = {
     Schedule.findOne({ _id: scheduleId }, (err, schedule) => {
       let tokens = schedule.tokens;
       if (err) {
+        logger.error(err);
         callback(false, 'Unknown error!');
       } else {
         const tokenIndex = _findTokenIndex(tokens, token.number);
@@ -702,6 +721,7 @@ module.exports = {
             },
             (err, raw) => {
               if (err) {
+                logger.error(err);
                 callback(false, 'Unknown error!');
               } else {
                 callback(true, 'Token added successfully.');
@@ -725,6 +745,7 @@ module.exports = {
   deleteToken(scheduleId, tokenNumber, callback) {
     Schedule.findOne({ _id: scheduleId }, (err, schedule) => {
       if (err) {
+        logger.error(err);
         callback(false);
       } else {
         let tokens = schedule.tokens;
@@ -741,6 +762,7 @@ module.exports = {
           },
           (err, raw) => {
             if (err) {
+              logger.error(err);
               callback(false);
             } else {
               callback(true);
@@ -873,6 +895,7 @@ module.exports = {
         try {
           callback(bookings);
         } catch (err) {
+          logger.error(err);
           callback([]);
         }
       }
@@ -997,6 +1020,7 @@ module.exports = {
       ],
       (err, booking) => {
         if (err) {
+          logger.error(err);
           callback({});
         } else {
           callback(booking[0]);
@@ -1043,6 +1067,7 @@ module.exports = {
       ],
       (err, doctors) => {
         if (err) {
+          logger.error(err);
           callback([]);
         } else {
           let masterData = doctors.map(doctor => {
@@ -1074,6 +1099,7 @@ module.exports = {
   getMasterHospitals(callback) {
     Hospital.find({}, (err, hospitals) => {
       if (err) {
+        logger.error(err);
         callback([]);
       } else {
         let masterData = hospitals.map(hospital => {
@@ -1111,6 +1137,7 @@ module.exports = {
       const frontdeskUsers = await _getMasterFrontdeskUsers();
       callback(frontdeskUsers);
     } catch (err) {
+      logger.error(err);
       callback([]);
       console.error(err);
     }
@@ -1149,12 +1176,15 @@ module.exports = {
               await _getMasterFrontdeskUsers()
             );
           })
-          .catch(err => console.log('Error creating frontdesk user. ' + err));
+          .catch(err => {
+            console.log('Error creating frontdesk user. ' + err);
+            logger.error(err);
+          });
       } else {
         callback(false, 'Entered mobile number is already registered!');
       }
     } catch (err) {
-      console.log(err);
+      logger.error(err);
       callback(false, 'Unknown error!');
     }
   },
@@ -1176,7 +1206,7 @@ module.exports = {
       );
       callback(status);
     } catch (err) {
-      console.log(err);
+      logger.error(err);
       callback(false);
     }
   },
@@ -1231,6 +1261,7 @@ module.exports = {
       ],
       (err, user) => {
         if (err) {
+          logger.error(err);
           callback({});
         } else {
           if (!utils.isNullOrEmpty(user)) {
@@ -1289,7 +1320,7 @@ module.exports = {
           },
           (err, raw) => {
             if (err) {
-              console.log(err);
+              logger.error(err);
               callback(false, 'Error updating doctor');
             } else {
               console.log(raw);
@@ -1325,7 +1356,7 @@ module.exports = {
       },
       (err, raw) => {
         if (err) {
-          console.log(err);
+          logger.error(err);
           callback(false, 'Error updating hospital');
         } else {
           console.log('Hospital details updated successfully.');
@@ -1363,6 +1394,7 @@ module.exports = {
       ],
       (err, schedules) => {
         if (err) {
+          logger.error(err);
           callback([]);
         } else {
           let hospitals = schedules.map(schedule => {
@@ -1441,6 +1473,7 @@ module.exports = {
       ],
       (err, schedules) => {
         if (err) {
+          logger.error(err);
           callback([]);
         } else {
           const doctors = schedules.map(schedule => {
@@ -1474,7 +1507,7 @@ module.exports = {
       },
       (err, announcements) => {
         if (err) {
-          console.log(err);
+          logger.error(err);
           callback([]);
         } else {
           callback(announcements);
@@ -1493,7 +1526,7 @@ module.exports = {
     const { contactNumber, contactEmail } = data;
     UserSupport.remove({}, err => {
       if (err) {
-        console.error(err);
+        logger.error(err);
       } else {
         console.log('user_supports collection data cleared.');
         UserSupport.collection
@@ -1506,7 +1539,7 @@ module.exports = {
             callback(true);
           })
           .catch(err => {
-            console.error('Failure updating user_supports collection. ' + err);
+            logger.error('Failure updating user_supports collection. ' + err);
             callback(false);
           });
       }
@@ -1550,7 +1583,7 @@ module.exports = {
       ],
       (err, doctors) => {
         if (err) {
-          console.log(err);
+          logger.error(err);
           callback([]);
         } else {
           const {
@@ -1603,6 +1636,7 @@ module.exports = {
       },
       (err, hospital) => {
         if (err) {
+          logger.error(err);
           callback([]);
         } else {
           callback(hospital);
@@ -1626,6 +1660,7 @@ function _getDoctorPdNumber() {
         console.log('Doctor PD Number --> lock acquired.');
         DoctorPdNumber.find({}, (err, numbers) => {
           if (err) {
+            logger.error(err);
             reject(err);
           } else {
             const { number } = numbers[0];
@@ -1639,7 +1674,9 @@ function _getDoctorPdNumber() {
               },
               (err, raw) => {
                 if (err) {
+                  logger.error(err);
                   reject(err);
+                  logger.error(err);
                 } else {
                   resolve('DR' + number);
                 }
@@ -1669,6 +1706,7 @@ function _getHospitalPdNumber() {
         console.log('Hospital PD Number --> lock acquired.');
         HospitalPdNumber.find({}, (err, numbers) => {
           if (err) {
+            logger.error(err);
             reject(err);
           } else {
             const { number } = numbers[0];
@@ -1682,6 +1720,7 @@ function _getHospitalPdNumber() {
               },
               (err, raw) => {
                 if (err) {
+                  logger.error(err);
                   reject(err);
                 } else {
                   resolve('HL' + number);
@@ -1707,6 +1746,7 @@ function _isLocationExists(name) {
   return new Promise((resolve, reject) => {
     Location.findOne({ name }, (err, location) => {
       if (err) {
+        logger.error(err);
         reject(err);
       } else {
         if (utils.isNullOrEmpty(location)) {
@@ -1732,6 +1772,7 @@ function _isScheduleExists(scheduleData) {
       { doctorId, hospitalId, weekday, startTime, endTime },
       (err, schedule) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           if (utils.isNullOrEmpty(schedule)) {
@@ -1755,6 +1796,7 @@ function _isSpecializationExists(name) {
   return new Promise((resolve, reject) => {
     Specialization.findOne({ name }, (err, specialization) => {
       if (err) {
+        logger.error(err);
         reject(err);
       } else {
         if (utils.isNullOrEmpty(specialization)) {
@@ -1776,6 +1818,7 @@ function _getUsersCount(userType) {
   return new Promise((resolve, reject) => {
     User.find({ userType }, (err, users) => {
       if (err) {
+        logger.error(err);
         reject(err);
       } else {
         resolve(users.length);
@@ -1795,6 +1838,7 @@ function _getHospitalsCount(location) {
   return new Promise((resolve, reject) => {
     Hospital.find(find, (err, hospitals) => {
       if (err) {
+        logger.error(err);
         reject(err);
       } else {
         resolve(hospitals.length);
@@ -1807,6 +1851,7 @@ function _getBookingHistoryCount() {
   return new Promise((resolve, reject) => {
     Booking.find({}, (err, bookings) => {
       if (err) {
+        logger.error(err);
         reject(err);
       } else {
         resolve(bookings.length);
@@ -1825,6 +1870,7 @@ function _updateUserStatus(userId, status) {
   return new Promise((resolve, reject) => {
     User.updateOne({ _id: userId }, { $set: { status } }, (err, raw) => {
       if (err) {
+        logger.error(err);
         reject(err);
       } else {
         resolve(true);
@@ -1867,7 +1913,7 @@ function _updateScheduleFrontdeskUser(hospitalId, doctorId, frontdeskUserId) {
       },
       (err, raw) => {
         if (err) {
-          console.log(err);
+          logger.error(err);
           reject(false);
         } else {
           console.log(
@@ -1894,6 +1940,7 @@ function _checkIfUserAlreadyExists(mobile) {
   return new Promise((resolve, reject) => {
     User.findOne({ username: mobile }, (err, user) => {
       if (err) {
+        logger.error(err);
         reject(err);
       } else {
         if (utils.isNullOrEmpty(user)) {
@@ -1924,6 +1971,7 @@ function _getMasterFrontdeskUsers() {
       },
       (err, users) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           let frontdeskUsers = users.map(user => {
@@ -1957,10 +2005,8 @@ function _createScoresRecord(doctorId) {
     .save(scores)
     .then(res => {})
     .catch(err =>
-      console.error(
-        `***** Error creating scores record for doctor with _id: ${
-          doctor._id
-        }` +
+      logger.error(
+        `***** Error creating scores record for doctor with _id: ${doctor._id}` +
           ' ' +
           err
       )

@@ -17,6 +17,7 @@ const momentTz = require('moment-timezone');
 const CronJob = require('cron').CronJob;
 const operations = require('../../constants/operation');
 const AsyncLock = require('async-lock');
+const logger = require('../utils/logger');
 
 const BOOKING_TIME_LIMIT = require('../../config/booking.json')
   .bookingStartLimit;
@@ -30,6 +31,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       Specialization.find({}, (err, specializationList) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           resolve(specializationList);
@@ -54,6 +56,7 @@ module.exports = {
         },
         (err, locationList) => {
           if (err) {
+            logger.error(err);
             reject(err);
           } else {
             resolve(locationList);
@@ -71,6 +74,7 @@ module.exports = {
     return new Promise((resolve, reject) => {
       User.findOne({ username: mobile }, async (err, user) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           if (utils.isNullOrEmpty(user.favorites)) {
@@ -80,7 +84,7 @@ module.exports = {
               const favorites = await _getFavoriteDoctors(user.favorites);
               resolve(favorites);
             } catch (err) {
-              console.log(err);
+              logger.error(err);
               reject(err);
             }
           }
@@ -102,7 +106,7 @@ module.exports = {
         );
         resolve(bookingWithoutFeedback);
       } catch (err) {
-        console.log(err);
+        logger.error(err);
         reject(err);
       }
     });
@@ -120,6 +124,7 @@ module.exports = {
       const favorites = await _updateFavorites(mobile, userId, operations.ADD);
       callback(true, favorites);
     } catch (err) {
+      logger.error(err);
       callback(false, null);
     }
   },
@@ -140,6 +145,7 @@ module.exports = {
       );
       callback(true, favorites);
     } catch (err) {
+      logger.error(err);
       callback(false, null);
     }
   },
@@ -218,6 +224,7 @@ module.exports = {
       ],
       (err, doctorsList) => {
         if (err) {
+          logger.error(err);
           callback(false, null);
         } else {
           callback(true, doctorsList);
@@ -285,6 +292,7 @@ module.exports = {
         ],
         async (err, drSchedules) => {
           if (err) {
+            logger.error(err);
             callback(false, []);
           } else {
             let drScheduleData = {
@@ -299,6 +307,7 @@ module.exports = {
         }
       );
     } catch (err) {
+      logger.error(err);
       callback(false, []);
     }
   },
@@ -316,6 +325,7 @@ module.exports = {
       { doctorId, scheduleId, tokenDate },
       (err, tokenTable) => {
         if (err) {
+          logger.error(err);
           callback(false, null);
         } else {
           if (utils.isNullOrEmpty(tokenTable)) {
@@ -345,6 +355,7 @@ module.exports = {
       { doctorId, scheduleId, tokenDate },
       (err, tokenTableDoc) => {
         if (err) {
+          logger.error(err);
           callback(false, null);
         } else {
           if (utils.isNullOrEmpty(tokenTableDoc)) {
@@ -381,6 +392,7 @@ module.exports = {
                   },
                   (err, raw) => {
                     if (err) {
+                      logger.error(err);
                       callback(false);
                     } else {
                       //create a cron job for checking after 3 minutes if the token is in blocked state
@@ -479,13 +491,20 @@ module.exports = {
               .then(res => {
                 callback(true, bookingId);
               })
-              .catch(err => console.log(err));
+              .catch(err => {
+                logger.error(err);
+                callback(false, '');
+              });
           })
-          .catch(err => console.log(err));
+          .catch(err => {
+            logger.error(err);
+            callback(false, '');
+          });
       } else {
         callback(false, '');
       }
     } catch (err) {
+      logger.error(err);
       callback(false, '');
     }
   },
@@ -514,6 +533,7 @@ module.exports = {
       },
       async (err, raw) => {
         if (err) {
+          logger.error(err);
           callback(false);
         } else {
           callback(true);
@@ -647,6 +667,7 @@ module.exports = {
       ],
       (err, bookings) => {
         if (err) {
+          logger.error(err);
           callback(err);
         } else {
           let currentBookings = [];
@@ -691,7 +712,7 @@ module.exports = {
         {},
         async (err, booking) => {
           if (err) {
-            console.log(err);
+            logger.error(err);
             callback(false);
           } else {
             try {
@@ -701,7 +722,7 @@ module.exports = {
               );
               callback(tokenTableUpdateStatus);
             } catch (err) {
-              console.log(err);
+              logger.error(err);
               callback(false);
             }
           }
@@ -740,9 +761,10 @@ function _updateTokenTableDoc(booking) {
             },
             (err, raw) => {
               if (err) {
+                logger.error(err);
                 reject(err);
               } else {
-                console.log(raw);
+                logger.trace(raw);
                 resolve(true);
               }
             }
@@ -762,6 +784,7 @@ function _getDoctorIdByUserId(userId) {
   return new Promise((resolve, reject) => {
     Doctor.findOne({ userId }, (err, doctor) => {
       if (err) {
+        logger.error(err);
         reject(err);
       } else {
         resolve(doctor._id);
@@ -790,6 +813,7 @@ function _getAvailabilityStatus(doctorId) {
       { _id: 0 },
       (err, tokenTableDocs) => {
         if (err) {
+          logger.error(err);
           callback(false, null);
         } else {
           if (utils.isNullOrEmpty(tokenTableDocs)) {
@@ -907,14 +931,20 @@ function _updateTokenStatus(doctorId, scheduleId, tokenDate, tokenNumber) {
             { doctorId, scheduleId, tokenDate },
             { $set: { tokens } },
             (err, raw) => {
-              console.log(
-                'Token number: ' +
-                  tokenNumber +
-                  ' has been updated to OPEN status.'
-              );
+              if (err) {
+                logger.error(err);
+              } else {
+                logger.trace(
+                  'Token number: ' +
+                    tokenNumber +
+                    ' has been updated to OPEN status.'
+                );
+              }
             }
           );
         }
+      } else {
+        logger.error(err);
       }
     }
   );
@@ -953,7 +983,7 @@ function _updateFavorites(mobile, userId, operation) {
             const favoriteDoctors = await _getFavoriteDoctors(favorites);
             resolve(favoriteDoctors);
           } catch (err) {
-            console.log(err);
+            logger.error(err);
             reject(err);
           }
         } else {
@@ -962,13 +992,14 @@ function _updateFavorites(mobile, userId, operation) {
             { $set: { favorites } },
             async (err, raw) => {
               if (err) {
+                logger.error(err);
                 reject(err);
               } else {
                 try {
                   const favoriteDoctors = await _getFavoriteDoctors(favorites);
                   resolve(favoriteDoctors);
                 } catch (err) {
-                  console.log(err);
+                  logger.error(err);
                   reject(err);
                 }
               }
@@ -1016,6 +1047,7 @@ function _getFavoriteDoctors(favoritesArray) {
       ],
       (err, favoriteDoctors) => {
         if (err) {
+          logger.error(err);
           reject([]);
         } else {
           const favorites = favoriteDoctors
@@ -1046,6 +1078,7 @@ function _getAutoNumber() {
         console.log('auto number lock acquired');
         AutoNumber.find({}, (err, numbers) => {
           if (err) {
+            logger.error(err);
             reject(err);
           } else {
             const { number } = numbers[0];
@@ -1059,6 +1092,7 @@ function _getAutoNumber() {
               },
               (err, raw) => {
                 if (err) {
+                  logger.error(err);
                   reject(err);
                 } else {
                   resolve(number);
@@ -1102,6 +1136,7 @@ function _getTokenTableData(doctorId, scheduleId, tokenDate) {
       { doctorId, scheduleId, tokenDate },
       (err, tokenTableDoc) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           resolve(tokenTableDoc);
@@ -1153,6 +1188,7 @@ function _updateTokenTableDocStatus(
               },
               (err, raw) => {
                 if (err) {
+                  logger.error(err);
                   reject(false);
                 } else {
                   resolve(true);
@@ -1257,6 +1293,7 @@ function _getLatestBookingWithoutFeedback(userId) {
       ],
       (err, booking) => {
         if (err) {
+          logger.error(err);
           reject(err);
         } else {
           if (!utils.isNullOrEmpty(booking)) {
@@ -1285,6 +1322,7 @@ function _getBookingStatus(bookingId) {
   return new Promise((resolve, reject) => {
     Booking.findOne({ bookingId }, (err, booking) => {
       if (err) {
+        logger.error(err);
         reject(err);
       } else {
         resolve(booking.status);

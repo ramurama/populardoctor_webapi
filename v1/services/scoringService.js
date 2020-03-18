@@ -7,6 +7,7 @@ const config = require('../../config/scoring.json');
 const _ = require('underscore');
 const moment = require('moment');
 const flat = require('flat');
+const logger = require('../utils/logger');
 
 const BOOKING_START_TIME_LIMIT = require('../../config/booking.json')
   .bookingStartLimit;
@@ -60,38 +61,48 @@ module.exports = {
         }
       ],
       (err, data) => {
-        data.map(drbookings => {
-          const trustPromise = _computeTrustPerDoctor(drbookings.bookings);
-          const popularityPromise = _computePopularityPerDoctor(
-            drbookings.bookings
-          );
-          const schedulePromise = _computeSchedulePeDoctor(drbookings.bookings);
-          Promise.all([trustPromise, popularityPromise, schedulePromise])
-            .then(data => {
-              const trust = data[0];
-              const popularity = data[1];
-              const schedule = data[2];
-              const total = trust + popularity + schedule;
+        if (err) {
+          logger.error(err);
+        } else {
+          data.map(drbookings => {
+            const trustPromise = _computeTrustPerDoctor(drbookings.bookings);
+            const popularityPromise = _computePopularityPerDoctor(
+              drbookings.bookings
+            );
+            const schedulePromise = _computeSchedulePeDoctor(
+              drbookings.bookings
+            );
+            Promise.all([trustPromise, popularityPromise, schedulePromise])
+              .then(data => {
+                const trust = data[0];
+                const popularity = data[1];
+                const schedule = data[2];
+                const total = trust + popularity + schedule;
 
-              Scores.updateOne(
-                { doctorId: drbookings._id },
-                {
-                  $set: {
-                    trust,
-                    popularity,
-                    schedule,
-                    total
+                Scores.updateOne(
+                  { doctorId: drbookings._id },
+                  {
+                    $set: {
+                      trust,
+                      popularity,
+                      schedule,
+                      total
+                    }
+                  },
+                  (err, raw) => {
+                    if (err) {
+                      logger.error(err);
+                    } else {
+                      logger.trace(raw);
+                    }
                   }
-                },
-                (err, raw) => {
-                  console.log(raw);
-                }
-              );
-            })
-            .catch(err => {
-              console.error(err);
-            });
-        });
+                );
+              })
+              .catch(err => {
+                logger.error(err);
+              });
+          });
+        }
       }
     );
   }

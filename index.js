@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const keys = require('./config/keys');
@@ -5,6 +6,7 @@ const cookieSession = require('cookie-session');
 const passport = require('passport');
 const bodyParser = require('body-parser');
 const multer = require('multer');
+const path = require('path');
 
 //models
 require('./models/User');
@@ -79,6 +81,11 @@ adminRouterV1(app, uploader);
 doctorRouterV1(app);
 frontdeskRouterV1(app);
 scoringEngineRouterV1(app);
+
+//for admin client send the admin panel
+app.get('/*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'adminclient', 'build', 'index.html'));
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT);

@@ -11,10 +11,11 @@ const logger = Bunyan.createLogger({
   streams: [
     {
       level: levelMap[process.env.NODE_ENV],
-      type: "rotating-file",
-      path: "./logs/pd.log",
-      period: "1d", // daily rotation
-      count: 5 // keep 5 back copies
+      // type: "rotating-file",
+      // path: "./logs/pd.log",
+      // period: "1d", // daily rotation
+      // count: 5 // keep 5 back copies
+      stream: process.stdout
     }
   ]
 });
